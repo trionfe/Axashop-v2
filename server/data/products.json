@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "columnId": 1,
+    "nameKey": "Netflix Premium",
+    "descKey": "Compte Netflix Premium 4K - 1 Mois",
+    "pricePayPal": "2.35",
+    "priceLTC": "0.00028",
+    "pricePSC": "2.50",
+    "image": "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=800&auto=format&fit=crop&q=60",
+    "isVisible": true
+  },
+  {
+    "id": 2,
+    "columnId": 1,
+    "nameKey": "Disney+ Lifetime",
+    "descKey": "Compte Disney+ - Accès à vie",
+    "pricePayPal": "2.40",
+    "priceLTC": "0.00029",
+    "pricePSC": "2.50",
+    "image": "https://images.unsplash.com/photo-1603354362441-26017006856c?w=800&auto=format&fit=crop&q=60",
+    "isVisible": true
+  }
+]

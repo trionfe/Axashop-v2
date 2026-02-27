@@ -1,0 +1,368 @@
+// Produits avec support multi-prix (PayPal, LTC, Paysafecard)
+export const DEFAULT_PRODUCTS = [
+  {
+    "id": "acc-2025-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2025_account_name",
+    "descKey": "prod_acc_2025_account_desc",
+    "pricePayPal": 1.00,
+    "priceLTC": 0.00012,
+    "pricePSC": 1.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2024-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2024_account_name",
+    "descKey": "prod_acc_2024_account_desc",
+    "pricePayPal": 1.50,
+    "priceLTC": 0.00018,
+    "pricePSC": 2.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2023-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2023_account_name",
+    "descKey": "prod_acc_2023_account_desc",
+    "pricePayPal": 1.10,
+    "priceLTC": 0.00013,
+    "pricePSC": 1.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2022-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2022_account_name",
+    "descKey": "prod_acc_2022_account_desc",
+    "pricePayPal": 1.50,
+    "priceLTC": 0.00018,
+    "pricePSC": 2.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2021-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2021_account_name",
+    "descKey": "prod_acc_2021_account_desc",
+    "pricePayPal": 2.00,
+    "priceLTC": 0.00024,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2020-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2020_account_name",
+    "descKey": "prod_acc_2020_account_desc",
+    "pricePayPal": 2.45,
+    "priceLTC": 0.00029,
+    "pricePSC": 3.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2019-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2019_account_name",
+    "descKey": "prod_acc_2019_account_desc",
+    "pricePayPal": 3.25,
+    "priceLTC": 0.00039,
+    "pricePSC": 4.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2018-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2018_account_name",
+    "descKey": "prod_acc_2018_account_desc",
+    "pricePayPal": 3.90,
+    "priceLTC": 0.00047,
+    "pricePSC": 5.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2017-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2017_account_name",
+    "descKey": "prod_acc_2017_account_desc",
+    "pricePayPal": 4.90,
+    "priceLTC": 0.00059,
+    "pricePSC": 6.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2016-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2016_account_name",
+    "descKey": "prod_acc_2016_account_desc",
+    "pricePayPal": 10.00,
+    "priceLTC": 0.00120,
+    "pricePSC": 10.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "acc-2015-account",
+    "columnId": "Accounts",
+    "nameKey": "prod_acc_2015_account_name",
+    "descKey": "prod_acc_2015_account_desc",
+    "pricePayPal": 53.00,
+    "priceLTC": 0.00636,
+    "pricePSC": 53.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-netflix",
+    "columnId": "Social",
+    "nameKey": "prod_social_netflix_name",
+    "descKey": "prod_social_netflix_desc",
+    "pricePayPal": 2.35,
+    "priceLTC": 0.00028,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-prime-video",
+    "columnId": "Social",
+    "nameKey": "prod_social_prime_video_name",
+    "descKey": "prod_social_prime_video_desc",
+    "pricePayPal": 3.15,
+    "priceLTC": 0.00038,
+    "pricePSC": 3.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-hbo-max",
+    "columnId": "Social",
+    "nameKey": "prod_social_hbo_max_name",
+    "descKey": "prod_social_hbo_max_desc",
+    "pricePayPal": 2.45,
+    "priceLTC": 0.00029,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-disney+-lifetime",
+    "columnId": "Social",
+    "nameKey": "prod_social_disney+_lifetime_name",
+    "descKey": "prod_social_disney+_lifetime_desc",
+    "pricePayPal": 2.40,
+    "priceLTC": 0.00029,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-crunchyroll-lifetime-[megafan]",
+    "columnId": "Social",
+    "nameKey": "prod_social_crunchyroll_lifetime_[megafan]_name",
+    "descKey": "prod_social_crunchyroll_lifetime_[megafan]_desc",
+    "pricePayPal": 2.55,
+    "priceLTC": 0.00031,
+    "pricePSC": 3.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-paramount+-lifetime",
+    "columnId": "Social",
+    "nameKey": "prod_social_paramount+_lifetime_name",
+    "descKey": "prod_social_paramount+_lifetime_desc",
+    "pricePayPal": 2.70,
+    "priceLTC": 0.00032,
+    "pricePSC": 3.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "deco-discord-decoration-4.99€",
+    "columnId": "Discord",
+    "nameKey": "prod_deco_discord_decoration_4.99€_name",
+    "descKey": "prod_deco_discord_decoration_4.99€_desc",
+    "pricePayPal": 2.38,
+    "priceLTC": 0.00029,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "deco-discord-decoration-5.99€",
+    "columnId": "Discord",
+    "nameKey": "prod_deco_discord_decoration_5.99€_name",
+    "descKey": "prod_deco_discord_decoration_5.99€_desc",
+    "pricePayPal": 2.75,
+    "priceLTC": 0.00033,
+    "pricePSC": 3.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "deco-discord-decoration-6.99€",
+    "columnId": "Discord",
+    "nameKey": "prod_deco_discord_decoration_6.99€_name",
+    "descKey": "prod_deco_discord_decoration_6.99€_desc",
+    "pricePayPal": 3.10,
+    "priceLTC": 0.00037,
+    "pricePSC": 3.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "deco-discord-decoration-7.99€",
+    "columnId": "Discord",
+    "nameKey": "prod_deco_discord_decoration_7.99€_name",
+    "descKey": "prod_deco_discord_decoration_7.99€_desc",
+    "pricePayPal": 3.30,
+    "priceLTC": 0.00040,
+    "pricePSC": 4.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "deco-discord-decoration-8.49€",
+    "columnId": "Discord",
+    "nameKey": "prod_deco_discord_decoration_8.49€_name",
+    "descKey": "prod_deco_discord_decoration_8.49€_desc",
+    "pricePayPal": 3.55,
+    "priceLTC": 0.00043,
+    "pricePSC": 4.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "deco-discord-decoration-9.99€",
+    "columnId": "Discord",
+    "nameKey": "prod_deco_discord_decoration_9.99€_name",
+    "descKey": "prod_deco_discord_decoration_9.99€_desc",
+    "pricePayPal": 4.05,
+    "priceLTC": 0.00049,
+    "pricePSC": 4.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "deco-discord-decoration-11.99€",
+    "columnId": "Discord",
+    "nameKey": "prod_deco_discord_decoration_11.99€_name",
+    "descKey": "prod_deco_discord_decoration_11.99€_desc",
+    "pricePayPal": 4.90,
+    "priceLTC": 0.00059,
+    "pricePSC": 5.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "deco-random-décoration",
+    "columnId": "Discord",
+    "nameKey": "prod_deco_random_décoration_name",
+    "descKey": "prod_deco_random_décoration_desc",
+    "pricePayPal": 2.60,
+    "priceLTC": 0.00031,
+    "pricePSC": 3.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "vpn-ip-vanish-vpn-1-year",
+    "columnId": "VPN",
+    "nameKey": "prod_vpn_ip_vanish_vpn_1_year_name",
+    "descKey": "prod_vpn_ip_vanish_vpn_1_year_desc",
+    "pricePayPal": 2.25,
+    "priceLTC": 0.00027,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "vpn-mullvad-vpn-lifetime",
+    "columnId": "VPN",
+    "nameKey": "prod_vpn_mullvad_vpn_lifetime_name",
+    "descKey": "prod_vpn_mullvad_vpn_lifetime_desc",
+    "pricePayPal": 5.50,
+    "priceLTC": 0.00066,
+    "pricePSC": 5.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "vpn-tunnelbear-vpn-lifetime",
+    "columnId": "VPN",
+    "nameKey": "prod_vpn_tunnelbear_vpn_lifetime_name",
+    "descKey": "prod_vpn_tunnelbear_vpn_lifetime_desc",
+    "pricePayPal": 2.30,
+    "priceLTC": 0.00028,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "vpn-nord-vpn-lifetime",
+    "columnId": "VPN",
+    "nameKey": "prod_vpn_nord_vpn_lifetime_name",
+    "descKey": "prod_vpn_nord_vpn_lifetime_desc",
+    "pricePayPal": 3.60,
+    "priceLTC": 0.00043,
+    "pricePSC": 4.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "game-roblox-1000rbx",
+    "columnId": "Gaming",
+    "nameKey": "prod_game_roblox_1000rbx_name",
+    "descKey": "prod_game_roblox_1000rbx_desc",
+    "pricePayPal": 8.50,
+    "priceLTC": 0.00102,
+    "pricePSC": 9.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "game-roblox-2000rbx",
+    "columnId": "Gaming",
+    "nameKey": "prod_game_roblox_2000rbx_name",
+    "descKey": "prod_game_roblox_2000rbx_desc",
+    "pricePayPal": 15.00,
+    "priceLTC": 0.00180,
+    "pricePSC": 15.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  }
+];
+
+export const getProducts = () => {
+  if (typeof window === 'undefined') return DEFAULT_PRODUCTS;
+  const saved = localStorage.getItem('app_products');
+  return saved ? JSON.parse(saved) : DEFAULT_PRODUCTS;
+};
+
+export const saveProducts = (products: any[]) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('app_products', JSON.stringify(products));
+  }
+};
+
+export const getSettings = () => {
+  if (typeof window === 'undefined') return { pscFeePercent: 10 };
+  const saved = localStorage.getItem('app_settings');
+  return saved ? JSON.parse(saved) : { pscFeePercent: 10 };
+};
+
+export const saveSettings = (settings: any) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('app_settings', JSON.stringify(settings));
+  }
+};
