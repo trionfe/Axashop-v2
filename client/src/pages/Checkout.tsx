@@ -82,6 +82,7 @@ export default function Checkout() {
     }
   });
 
+  // Charger le SDK PayPal
   useEffect(() => {
     const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'Ab8rNO85xRs7DqCkUMAgGXvFf4jsrcNh-uH6hRecXNjSPj5mYQ9dNE1KT4lMZ2FZY_fj23vmOMo-e7zt';
     if (selectedPaymentMethod === 'paypal' && !window.paypal) {
@@ -122,6 +123,7 @@ export default function Checkout() {
         onApprove: async (data: any, actions: any) => {
           setIsProcessing(true);
           try {
+            // Sauvegarder la commande en attente d'abord
             await submitPaymentMutation.mutateAsync({
               orderId,
               method: 'paypal',
@@ -137,6 +139,7 @@ export default function Checkout() {
               paymentProof: `PayPal Order ID: ${data.orderID}`
             });
 
+            // Capturer le paiement côté serveur
             await capturePaypalMutation.mutateAsync({
               orderId: data.orderID,
               shopOrderId: orderId
@@ -148,6 +151,48 @@ export default function Checkout() {
           }
         }
       }).render('#paypal-button-container');
+    }
+  };
+
+  const handlePayment = async () => {
+    const error = validateEmail(buyerEmail);
+    if (error) {
+      setEmailError(error);
+      toast.error(error);
+      return;
+    }
+    
+    if (selectedPaymentMethod === 'paysafecard' && !paymentProof) {
+      toast.error('Veuillez fournir une preuve de paiement');
+      return;
+    }
+
+    setEmailError(null);
+    setIsProcessing(true);
+
+    try {
+      const totalStr = selectedPaymentMethod === 'ltc' 
+        ? `${totals.ltc.toFixed(6)} LTC` 
+        : `€${totals.psc.toFixed(2)}`;
+
+      await submitPaymentMutation.mutateAsync({
+        orderId,
+        method: selectedPaymentMethod,
+        buyerName: "Client",
+        buyerEmail,
+        items: items.map(i => ({
+          id: i.productId,
+          name: i.productName,
+          quantity: i.quantity,
+          price: selectedPaymentMethod === 'ltc' ? i.priceLTC.toString() : i.pricePSC.toString()
+        })),
+        total: totalStr,
+        paymentProof
+      });
+    } catch (error: any) {
+      console.error(error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -262,7 +307,6 @@ export default function Checkout() {
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2">{t.emailLabel}</label>
                     <Input 
-                      type="email" 
                       placeholder={t.emailPlaceholder} 
                       value={buyerEmail} 
                       onChange={(e) => {
@@ -270,89 +314,85 @@ export default function Checkout() {
                         if (emailError) setEmailError(null);
                       }} 
                       className={cn(
-                        "h-12 bg-white/[0.02] border-white/10 rounded-xl text-white",
-                        emailError && "border-red-500 ring-1 ring-red-500"
+                        "h-14 bg-white/[0.02] border-white/10 rounded-2xl text-white focus:ring-primary/20",
+                        emailError && "border-red-500/50 focus:ring-red-500/20"
                       )} 
                     />
-                    {emailError && (
-                      <p className="text-[10px] text-red-500 mt-1 font-bold">
-                        {emailError}
-                      </p>
-                    )}
-                    <p className="text-[10px] text-slate-400 mt-2">{t.emailHint}</p>
+                    {emailError && <p className="text-red-500 text-[10px] mt-2 font-bold uppercase tracking-tighter">{emailError}</p>}
+                    <p className="text-[10px] text-slate-500 mt-2 italic">{t.emailHint}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="glass-card p-8 rounded-2xl border-white/[0.05] space-y-4">
+              <div className="glass-card p-8 rounded-2xl border-white/[0.05] space-y-6">
                 <h2 className="text-2xl font-black text-white mb-6">{t.step2Title}</h2>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[
-                    { id: 'paypal', label: 'PayPal', icon: '💳', amount: `€${totals.paypal.toFixed(2)}` },
-                    { id: 'ltc', label: 'Litecoin', icon: 'Ł', amount: `${totals.ltc.toFixed(6)} LTC` },
-                    { id: 'paysafecard', label: 'Paysafecard', icon: '🎫', amount: `€${totals.psc.toFixed(2)}` },
+                    { id: 'paypal', name: 'PayPal', icon: '💳', desc: t.paypalSecurePayment },
+                    { id: 'ltc', name: 'Litecoin', icon: '₿', desc: t.litecoinCrypto },
+                    { id: 'paysafecard', name: 'Paysafecard', icon: '🎫', desc: t.paysafecardPrepaid }
                   ].map((method) => (
-                    <button key={method.id} onClick={() => { setSelectedPaymentMethod(method.id as any); setPaymentProof(''); }} className={`p-4 rounded-xl border-2 transition-all text-left w-full ${selectedPaymentMethod === method.id ? 'border-primary bg-primary/10' : 'border-white/10 bg-white/[0.02] hover:border-white/20'}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{method.icon}</span>
-                          <span className="font-black text-white">{method.label}</span>
-                        </div>
-                        <span className="text-lg font-black text-white">{method.amount}</span>
-                      </div>
+                    <button
+                      key={method.id}
+                      onClick={() => setSelectedPaymentMethod(method.id as any)}
+                      className={cn(
+                        "p-6 rounded-2xl border transition-all text-left relative overflow-hidden group",
+                        selectedPaymentMethod === method.id 
+                          ? "bg-primary/10 border-primary shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)]" 
+                          : "bg-white/[0.02] border-white/10 hover:border-white/20"
+                      )}
+                    >
+                      <div className="text-2xl mb-3">{method.icon}</div>
+                      <div className="font-black text-white text-sm mb-1">{method.name}</div>
+                      <div className="text-[10px] text-slate-500 font-medium leading-tight">{method.desc}</div>
+                      {selectedPaymentMethod === method.id && (
+                        <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="glass-card p-8 rounded-2xl border-white/[0.05] space-y-6">
+                <h2 className="text-2xl font-black text-white mb-6">{t.step3Title}</h2>
+                
                 {selectedPaymentMethod === 'paypal' && (
-                  <div className="space-y-4">
-                    <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-4">
+                  <div className="space-y-6">
+                    <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 space-y-4">
                       <div className="flex items-center gap-3">
-                        <AlertCircle className="w-6 h-6 text-blue-500" />
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <CheckCircle2 className="w-5 h-5 text-primary" />
+                        </div>
                         <h3 className="text-xl font-black text-white">{t.paypalTitle}</h3>
                       </div>
-                      <div className="space-y-3 text-sm text-slate-300">
-                        <p>{t.paypalDesc}</p>
-                        <ul className="list-disc list-inside space-y-1 ml-2">
-                          <li>{t.paypalStep1}</li>
-                          <li>{t.paypalStep2}</li>
-                          <li>{t.paypalStep3}</li>
-                          <li>{t.paypalStep4}</li>
-                        </ul>
-                        <p className="text-[10px] bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
-                          {t.paypalNote}
-                        </p>
-                      </div>
-                      <div id="paypal-button-container" className="min-h-[150px] py-4"></div>
+                      <ul className="space-y-3 text-sm text-slate-300">
+                        <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> {t.paypalStep1}</li>
+                        <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> {t.paypalStep2}</li>
+                        <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> {t.paypalStep3}</li>
+                        <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> {t.paypalStep4}</li>
+                      </ul>
+                      <p className="text-[10px] text-slate-500 italic pt-2 border-t border-white/5">{t.paypalNote}</p>
+                    </div>
+                    <div id="paypal-button-container" className="min-h-[150px] bg-white/[0.02] rounded-2xl border border-white/5 p-4 flex items-center justify-center">
+                      {!buyerEmail && <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Veuillez entrer votre email pour activer PayPal</p>}
                     </div>
                   </div>
                 )}
+
                 {selectedPaymentMethod === 'ltc' && (
-                  <div className="space-y-4">
-                    <div className="p-6 rounded-2xl bg-orange-500/10 border border-orange-500/20 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <AlertCircle className="w-6 h-6 text-orange-500" />
-                        <h3 className="text-xl font-black text-white">{t.ltcTitle}</h3>
-                      </div>
-                      <ul className="space-y-3 text-sm text-slate-300 list-disc list-inside">
-                        <li>{t.ltcStep1}</li>
-                        <li>{t.ltcStep2}</li>
-                        <li>{t.ltcStep3}</li>
-                        <li>{t.ltcStep4}</li>
-                      </ul>
-                      <div className="p-4 bg-black/20 rounded-xl border border-white/5 space-y-2">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-6 rounded-2xl bg-orange-500/5 border border-orange-500/10 space-y-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.ltcAmountLabel}</p>
                         <div className="flex items-center justify-between">
-                          <span className="text-white font-bold">{totals.ltc.toFixed(6)} LTC</span>
-                          <button onClick={() => copyToClipboard(totals.ltc.toFixed(6))} className="text-primary hover:text-primary/80"><Copy className="w-4 h-4" /></button>
+                          <span className="text-2xl font-black text-white">{totals.ltc.toFixed(6)} LTC</span>
+                          <button onClick={() => copyToClipboard(totals.ltc.toFixed(6))} className="text-primary hover:text-primary/80 flex-shrink-0"><Copy className="w-4 h-4" /></button>
                         </div>
                       </div>
-                      <div className="p-4 bg-black/20 rounded-xl border border-white/5 space-y-2">
+                      <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.ltcWalletLabel}</p>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] sm:text-xs text-white font-mono break-all">LdM8wifnAMZwtMAjsq8caxrtXjYRfrf2nV</span>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-[11px] font-mono text-slate-300 truncate">LdM8wifnAMZwtMAjsq8caxrtXjYRfrf2nV</span>
                           <button onClick={() => copyToClipboard('LdM8wifnAMZwtMAjsq8caxrtXjYRfrf2nV')} className="text-primary hover:text-primary/80 flex-shrink-0"><Copy className="w-4 h-4" /></button>
                         </div>
                       </div>
@@ -381,6 +421,7 @@ export default function Checkout() {
                     </div>
                   </div>
                 )}
+
                 {selectedPaymentMethod === 'paysafecard' && (
                   <div className="space-y-4">
                     <div className="p-6 rounded-2xl bg-green-500/10 border border-green-500/20 space-y-4">
@@ -423,33 +464,45 @@ export default function Checkout() {
                         {selectedPaymentMethod === 'paypal' 
                           ? `€${(item.pricePayPal * item.quantity).toFixed(2)}` 
                           : selectedPaymentMethod === 'ltc' 
-                            ? `${(item.priceLTC * item.quantity).toFixed(6)} LTC`
-                            : `€${(item.pricePSC * item.quantity).toFixed(2)}`
-                        }
+                          ? `${(item.priceLTC * item.quantity).toFixed(6)} LTC` 
+                          : `€${(item.pricePSC * (1 + item.pscFeePercent / 100) * item.quantity).toFixed(2)}`}
                       </span>
                     </div>
                   ))}
                 </div>
-                <div className="pt-6 border-t border-white/10 space-y-4">
+                <div className="pt-4 border-t border-white/10 space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-400 font-bold">{t.totalLabel}</span>
-                    <span className="text-2xl font-black text-white">
+                    <span className="text-white font-black">{t.totalLabel}</span>
+                    <span className="text-2xl font-black text-primary whitespace-nowrap">
                       {selectedPaymentMethod === 'paypal' 
                         ? `€${totals.paypal.toFixed(2)}` 
                         : selectedPaymentMethod === 'ltc' 
-                          ? `${totals.ltc.toFixed(6)} LTC`
-                          : `€${totals.psc.toFixed(2)}`
-                      }
+                        ? `${totals.ltc.toFixed(6)} LTC` 
+                        : `€${totals.psc.toFixed(2)}`}
                     </span>
                   </div>
                   {selectedPaymentMethod !== 'paypal' && (
-                    <Button 
-                      onClick={handlePayment} 
-                      disabled={isProcessing || items.length === 0}
-                      className="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-lg shadow-primary/20 transition-all"
-                    >
-                      {isProcessing ? t.processing : t.confirmOrder}
-                    </Button>
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={handlePayment} 
+                        disabled={isProcessing}
+                        className={cn(
+                          "w-full h-14 font-black rounded-2xl shadow-lg transition-all duration-300",
+                          selectedPaymentMethod === 'ltc' 
+                            ? "bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/20"
+                            : "bg-primary hover:bg-primary/90 text-white shadow-primary/20"
+                        )}
+                      >
+                        {isProcessing ? t.processing : selectedPaymentMethod === 'ltc' ? 'Vérifier mon paiement' : t.confirmOrder}
+                      </Button>
+                      
+                      {selectedPaymentMethod === 'ltc' && (
+                        <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
+                          <RefreshCcw className="w-3 h-3 text-orange-500 animate-spin" />
+                          <span className="text-[10px] text-orange-500/80 font-bold uppercase tracking-widest">Surveillance Blockchain active</span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
