@@ -42,9 +42,7 @@ export const appRouter = router({
       const { ONE_YEAR_MS, COOKIE_NAME } = await import("@shared/const");
       const { getSessionCookieOptions } = await import("./_core/cookies");
 
-      const adminPassword = "(À/'Ùô8 ̧ÿÛ|íXHá»à.9,ÄÌäÃoQ?E£μ{èIL£&qä¢'H";
-
-      if (input.password !== adminPassword) {
+      if (input.password !== ENV.adminPassword) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid admin password",
