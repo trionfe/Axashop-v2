@@ -80,7 +80,7 @@ export default function Header() {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
               </a>
             ))}
-            {user?.role === "admin" && (
+            {(user?.role === "admin" || localStorage.getItem("admin_auth") === "true") && (
               <a href="/admin" className="text-sm font-semibold text-primary hover:text-blue-400 transition-colors">
                 {(t as any).dashboard}
               </a>
@@ -187,7 +187,7 @@ export default function Header() {
                 {link.name}
               </a>
             ))}
-            {user?.role === "admin" && (
+            {(user?.role === "admin" || localStorage.getItem("admin_auth") === "true") && (
               <a href="/admin" className="text-2xl font-bold text-primary" onClick={() => setIsOpen(false)}>
                 {t.dashboard}
               </a>

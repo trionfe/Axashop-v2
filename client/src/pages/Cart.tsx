@@ -6,6 +6,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/lib/translations';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { trpc } from '@/lib/trpc';
+import { useEffect } from 'react';
 
 export default function Cart() {
   const { items, removeFromCart, updateQuantity, getTotalPrice } = useCart();
@@ -15,6 +17,29 @@ export default function Cart() {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const totals = getTotalPrice();
+
+  // Notifier Discord quand on arrive sur le panier
+  const notifyMutation = trpc.notifyCartCreated.useMutation();
+  const [hasNotified, setHasNotified] = useState(false);
+
+  useEffect(() => {
+    if (items.length > 0 && !hasNotified) {
+      notifyMutation.mutate({
+        items: items.map(i => ({
+          name: i.productName,
+          quantity: i.quantity,
+          price: i.paymentMethod === 'paypal' ? `€${i.pricePayPal.toFixed(2)}` : i.paymentMethod === 'ltc' ? `${i.priceLTC.toFixed(6)} LTC` : `€${(i.pricePSC * (1 + i.pscFeePercent / 100)).toFixed(2)}`,
+          method: i.paymentMethod
+        })),
+        totals: {
+          paypal: `€${totals.paypal.toFixed(2)}`,
+          ltc: `${totals.ltc.toFixed(6)} LTC`,
+          psc: `€${totals.psc.toFixed(2)}`
+        }
+      });
+      setHasNotified(true);
+    }
+  }, [items, hasNotified]);
 
   const handleRemove = (itemId: string) => {
     setRemovingId(itemId);

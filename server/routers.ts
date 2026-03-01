@@ -103,7 +103,7 @@ export const appRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
-        const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1467183990380171304/cp8H9z5JqNG73ljKB9Jc1mbYGGwsa4u6lleOWSUcosESJeIqKyRO5y1riQcSQ-d79r2e";
+        const DISCORD_WEBHOOK_URL = ENV.discordWebhookUrl || "https://discord.com/api/webhooks/1467183990380171304/cp8H9z5JqNG73ljKB9Jc1mbYGGwsa4u6lleOWSUcosESJeIqKyRO5y1riQcSQ-d79r2e";
         
         // URL de base pour les actions
         const headers = (ctx.req as any)?.headers || {};
@@ -117,11 +117,11 @@ export const appRouter = router({
           description: `Une nouvelle commande attend votre validation.`,
           color: 0x3b82f6,
           fields: [
-            { name: "👤 Client (Email)", value: input.buyerEmail, inline: true },
-            { name: "💳 Méthode", value: input.method.toUpperCase(), inline: true },
-            { name: "💰 Total", value: input.total, inline: true },
+            { name: "👤 Client (Email)", value: `**${input.buyerEmail}**`, inline: true },
+            { name: "💳 Méthode", value: `**${input.method.toUpperCase()}**`, inline: true },
+            { name: "💰 Total", value: `**${input.total}**`, inline: true },
             { name: "📝 Preuve / Code PIN / TXID", value: `\`\`\`${input.paymentProof || "N/A"}\`\`\`` },
-            { name: "📦 Produits & IDs Panier", value: input.items.map((i: any) => `• **${i.name}** (ID: ${i.id}) x${i.quantity}`).join('\n') }
+            { name: "📦 Détails du Panier", value: input.items.map((i: any) => `• **${i.name}** x${i.quantity} (${i.price})`).join('\n') }
           ],
           footer: { text: "Axa Shop - Système de Paiement Manuel" },
           timestamp: new Date().toISOString()
@@ -158,6 +158,52 @@ export const appRouter = router({
     }),
 
   paysafecard: paysafecardRouter,
+
+  // Notification Panier Discord
+  notifyCartCreated: publicProcedure
+    .input(z.object({
+      items: z.array(z.object({
+        name: z.string(),
+        quantity: z.number(),
+        price: z.string(),
+        method: z.string()
+      })),
+      totals: z.object({
+        paypal: z.string(),
+        ltc: z.string(),
+        psc: z.string()
+      })
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        const DISCORD_WEBHOOK_URL = ENV.discordWebhookUrl || "https://discord.com/api/webhooks/1467183990380171304/cp8H9z5JqNG73ljKB9Jc1mbYGGwsa4u6lleOWSUcosESJeIqKyRO5y1riQcSQ-d79r2e";
+        
+        const embed = {
+          title: `🛒 Nouveau Panier Créé`,
+          description: `Un utilisateur vient de préparer un panier sur la boutique.`,
+          color: 0xfacc15, // Jaune
+          fields: [
+            { 
+              name: "📦 Contenu du Panier", 
+              value: input.items.map(i => `• **${i.name}** x${i.quantity} (${i.method.toUpperCase()}: ${i.price})`).join('\n') || "Panier vide"
+            },
+            { 
+              name: "💰 Totaux Estimés", 
+              value: `• PayPal: **${input.totals.paypal}**\n• LTC: **${input.totals.ltc}**\n• PSC: **${input.totals.psc}**` 
+            }
+          ],
+          footer: { text: "Axa Shop - Notification Panier" },
+          timestamp: new Date().toISOString()
+        };
+
+        await axios.post(DISCORD_WEBHOOK_URL, { embeds: [embed] });
+        return { success: true };
+      } catch (error) {
+        console.error("Erreur notification panier:", error);
+        return { success: false };
+      }
+    }),
+
   getLtcHistory: publicProcedure.query(async () => {
     const LTC_ADDRESS = process.env.LITECOIN_ADDRESS || 'LdM8wifnAMZwtMAjsq8caxrtXjYRfrf2nV';
     try {
