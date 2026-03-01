@@ -6,25 +6,14 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { LayoutDashboard, Package, Users, ShoppingCart, Plus, Lock, ShieldAlert, ArrowRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { trpc } from "@/lib/trpc";
 
 export default function Admin() {
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
 
-  const loginMutation = trpc.adminLogin.useMutation({
-    onSuccess: () => {
-      localStorage.setItem("admin_auth", "true");
-      setIsAuthenticated(true);
-      toast.success("Accès autorisé : Bienvenue Admin");
-      setLocation("/admin");
-    },
-    onError: (err) => {
-      toast.error("Erreur : " + err.message);
-    }
-  });
+  // La clé admin exacte demandée
+  const ADMIN_KEY = "(À/'Ùô8 ̧ÿÛ|íXHá»à.9,ÄÌäÃoQ?E£μ{èIL£&qä¢'H";
 
   // Vérifier si déjà connecté au chargement
   useEffect(() => {
@@ -34,13 +23,16 @@ export default function Admin() {
     }
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    try {
-      await loginMutation.mutateAsync({ password });
-    } finally {
-      setIsLoading(false);
+    
+    // Vérification directe dans le code (pas de backend)
+    if (password === ADMIN_KEY) {
+      localStorage.setItem("admin_auth", "true");
+      setIsAuthenticated(true);
+      toast.success("Accès autorisé : Bienvenue Admin");
+    } else {
+      toast.error("Mot de passe incorrect");
     }
   };
 
@@ -87,9 +79,8 @@ export default function Admin() {
             <Button 
               type="submit" 
               className="w-full h-14 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)] transition-all"
-              disabled={isLoading}
             >
-              {isLoading ? "Authentification..." : "Déverrouiller le Dashboard"}
+              Déverrouiller le Dashboard
             </Button>
           </form>
 
