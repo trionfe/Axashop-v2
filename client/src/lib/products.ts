@@ -122,10 +122,10 @@ export const DEFAULT_PRODUCTS = [
     "stock": 29
   },
   {
-    "id": "social-netflix",
+    "id": "social-netflix-no-ads",
     "columnId": "Social",
-    "nameKey": "prod_social_netflix_name",
-    "descKey": "prod_social_netflix_desc",
+    "nameKey": "prod_social_netflix_no_ads_name",
+    "descKey": "prod_social_netflix_no_ads_desc",
     "pricePayPal": 2.35,
     "priceLTC": 0.00028,
     "pricePSC": 2.50,
@@ -133,13 +133,101 @@ export const DEFAULT_PRODUCTS = [
     "stock": 29
   },
   {
-    "id": "social-prime-video",
+    "id": "social-netflix-4k",
     "columnId": "Social",
-    "nameKey": "prod_social_prime_video_name",
-    "descKey": "prod_social_prime_video_desc",
+    "nameKey": "prod_social_netflix_4k_name",
+    "descKey": "prod_social_netflix_4k_desc",
+    "pricePayPal": 3.50,
+    "priceLTC": 0.00042,
+    "pricePSC": 3.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-netflix-random",
+    "columnId": "Social",
+    "nameKey": "prod_social_netflix_random_name",
+    "descKey": "prod_social_netflix_random_desc",
+    "pricePayPal": 1.50,
+    "priceLTC": 0.00018,
+    "pricePSC": 1.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-prime-video-lifetime",
+    "columnId": "Social",
+    "nameKey": "prod_social_prime_video_lifetime_name",
+    "descKey": "prod_social_prime_video_lifetime_desc",
     "pricePayPal": 3.15,
     "priceLTC": 0.00038,
     "pricePSC": 3.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-prime-video-6months",
+    "columnId": "Social",
+    "nameKey": "prod_social_prime_video_6months_name",
+    "descKey": "prod_social_prime_video_6months_desc",
+    "pricePayPal": 2.00,
+    "priceLTC": 0.00024,
+    "pricePSC": 2.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-prime-video-1month",
+    "columnId": "Social",
+    "nameKey": "prod_social_prime_video_1month_name",
+    "descKey": "prod_social_prime_video_1month_desc",
+    "pricePayPal": 1.20,
+    "priceLTC": 0.00014,
+    "pricePSC": 1.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-youtube-premium-lifetime-fa",
+    "columnId": "Social",
+    "nameKey": "prod_social_youtube_premium_lifetime_fa_name",
+    "descKey": "prod_social_youtube_premium_lifetime_fa_desc",
+    "pricePayPal": 2.50,
+    "priceLTC": 0.00030,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-youtube-premium-family-owner-lifetime-fa",
+    "columnId": "Social",
+    "nameKey": "prod_social_youtube_premium_family_owner_lifetime_fa_name",
+    "descKey": "prod_social_youtube_premium_family_owner_lifetime_fa_desc",
+    "pricePayPal": 3.50,
+    "priceLTC": 0.00042,
+    "pricePSC": 3.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-chatgpt-plus-fa-1month",
+    "columnId": "Social",
+    "nameKey": "prod_social_chatgpt_plus_fa_1month_name",
+    "descKey": "prod_social_chatgpt_plus_fa_1month_desc",
+    "pricePayPal": 2.80,
+    "priceLTC": 0.00034,
+    "pricePSC": 3.00,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 29
+  },
+  {
+    "id": "social-chatgpt-go-fa-1year",
+    "columnId": "Social",
+    "nameKey": "prod_social_chatgpt_go_fa_1year_name",
+    "descKey": "prod_social_chatgpt_go_fa_1year_desc",
+    "pricePayPal": 9.90,
+    "priceLTC": 0.00119,
+    "pricePSC": 10.00,
     "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
     "stock": 29
   },
