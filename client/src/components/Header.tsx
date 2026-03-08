@@ -94,20 +94,37 @@ export default function Header() {
           <CartWidget />
 
           {/* Language Selector */}
-          <div className="hidden md:flex items-center gap-1 bg-white/[0.03] border border-white/[0.08] rounded-full p-1">
-            {["en", "fr"].map((lang) => (
-              <button
-                key={lang}
-                onClick={() => setLanguage(lang as "en" | "fr")}
-                className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest transition-all ${
-                  language === lang
-                    ? "bg-primary text-white shadow-lg"
-                    : "text-slate-500 hover:text-slate-300"
-                }`}
-              >
-                {lang.toUpperCase()}
-              </button>
-            ))}
+          <div className="hidden md:block relative group">
+            <button className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl text-[11px] font-black text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all">
+              {language.toUpperCase()}
+              <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            <div className="absolute right-0 top-full mt-2 w-32 bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              {[
+                { code: "fr", label: "🇫🇷 FR" },
+                { code: "en", label: "🇬🇧 EN" },
+                { code: "es", label: "🇪🇸 ES" },
+                { code: "de", label: "🇩🇪 DE" },
+                { code: "it", label: "🇮🇹 IT" },
+                { code: "pt", label: "🇵🇹 PT" },
+                { code: "nl", label: "🇳🇱 NL" },
+                { code: "tr", label: "🇹🇷 TR" },
+                { code: "ru", label: "🇷🇺 RU" },
+                { code: "ar", label: "🇸🇦 AR" },
+              ].map(({ code, label }) => (
+                <button
+                  key={code}
+                  onClick={() => setLanguage(code as any)}
+                  className={`w-full px-4 py-2.5 text-left text-[11px] font-bold transition-all ${
+                    language === code
+                      ? "bg-primary/20 text-primary"
+                      : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Auth Buttons */}
@@ -194,23 +211,35 @@ export default function Header() {
             )}
             
             {/* Language Selector Mobile */}
-            <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.08] rounded-full p-1 mt-6">
-              {["en", "fr"].map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => {
-                    setLanguage(lang as "en" | "fr");
-                    setIsOpen(false);
-                  }}
-                  className={`flex-1 px-3 py-2 rounded-full text-sm font-black tracking-widest transition-all ${
-                    language === lang
-                      ? "bg-primary text-white shadow-lg"
-                      : "text-slate-500 hover:text-slate-300"
-                  }`}
-                >
-                  {lang.toUpperCase()}
-                </button>
-              ))}
+            <div className="mt-6">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Langue / Language</p>
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { code: "fr", label: "🇫🇷" },
+                  { code: "en", label: "🇬🇧" },
+                  { code: "es", label: "🇪🇸" },
+                  { code: "de", label: "🇩🇪" },
+                  { code: "it", label: "🇮🇹" },
+                  { code: "pt", label: "🇵🇹" },
+                  { code: "nl", label: "🇳🇱" },
+                  { code: "tr", label: "🇹🇷" },
+                  { code: "ru", label: "🇷🇺" },
+                  { code: "ar", label: "🇸🇦" },
+                ].map(({ code, label }) => (
+                  <button
+                    key={code}
+                    onClick={() => { setLanguage(code as any); setIsOpen(false); }}
+                    className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-[10px] font-black transition-all border ${
+                      language === code
+                        ? "bg-primary/20 border-primary/40 text-primary"
+                        : "border-white/10 text-slate-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <span className="text-xl">{label}</span>
+                    <span>{code.toUpperCase()}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             
             <div className="pt-8 border-t border-white/10 mt-auto">
