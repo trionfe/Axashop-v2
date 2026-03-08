@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
-type Language = "en" | "fr";
+type Language = "en" | "fr" | "es" | "de" | "it" | "pt" | "nl" | "tr" | "ru" | "ar";
 
 interface LanguageContextType {
   language: Language;
@@ -13,13 +13,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem("app-language");
-      return (saved === "en" || saved === "fr") ? saved : "fr";
+      const valid: Language[] = ["en", "fr", "es", "de", "it", "pt", "nl", "tr", "ru", "ar"];
+      return valid.includes(saved as Language) ? (saved as Language) : "fr";
     }
     return "fr";
   });
 
   useEffect(() => {
     localStorage.setItem("app-language", language);
+    // Pour l'arabe (langue RTL), on change la direction du document
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
   }, [language]);
 
   return (
