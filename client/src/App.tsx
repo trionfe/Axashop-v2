@@ -19,6 +19,7 @@ import AdminOrders from "./pages/AdminOrders";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import FAQ from "./pages/FAQ";
+import ProductPage from "./pages/ProductPage";
 import { useAuth } from "./_core/hooks/useAuth";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/product/:groupId" component={ProductPage} />
       <Route path="/vouchers" component={Vouchers} />
       <Route path="/terms" component={Terms} />
       <Route path="/contact" component={Contact} />
