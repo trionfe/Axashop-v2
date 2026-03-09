@@ -8,14 +8,55 @@ import { translations } from "@/lib/translations";
 import { getProducts, getSettings } from "@/lib/products";
 import { useCart } from "@/contexts/CartContext";
 import PaymentMethodSelector from "@/components/PaymentMethodSelector";
-
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
-// Groupes de produits : une carte mère → plusieurs variantes
-const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids: string[] }> = {
+// ─── GROUPES : carte mère cliquable → variantes ───────────────────────────────
+const PRODUCT_GROUPS: Record<string, {
+  label: string;
+  category: string;
+  image: string;
+  ids: string[];
+}> = {
+  // Accounts : tous les comptes Discord 2015→2025
+  "group-accounts": {
+    label: "Compte Discord",
+    category: "Accounts",
+    image: "https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=800&auto=format&fit=crop&q=60",
+    ids: [
+      "acc-2025-account",
+      "acc-2024-account",
+      "acc-2023-account",
+      "acc-2022-account",
+      "acc-2021-account",
+      "acc-2020-account",
+      "acc-2019-account",
+      "acc-2018-account",
+      "acc-2017-account",
+      "acc-2016-account",
+      "acc-2015-account",
+    ],
+  },
+  // Discord : toutes les décorations
+  "group-discord-deco": {
+    label: "Décoration Discord",
+    category: "Discord",
+    image: "https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=800&auto=format&fit=crop&q=60",
+    ids: [
+      "deco-discord-decoration-4.99€",
+      "deco-discord-decoration-5.99€",
+      "deco-discord-decoration-6.99€",
+      "deco-discord-decoration-7.99€",
+      "deco-discord-decoration-8.49€",
+      "deco-discord-decoration-9.99€",
+      "deco-discord-decoration-11.99€",
+      "deco-random-décoration",
+    ],
+  },
+  // Social : Netflix
   "group-netflix": {
     label: "Netflix",
+    category: "Social",
     image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
     ids: [
       "social-netflix-no-ads",
@@ -23,8 +64,10 @@ const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids: string
       "social-netflix-random",
     ],
   },
+  // Social : Prime Video
   "group-prime-video": {
     label: "Prime Video",
+    category: "Social",
     image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
     ids: [
       "social-prime-video-lifetime",
@@ -32,25 +75,41 @@ const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids: string
       "social-prime-video-1month",
     ],
   },
+  // Social : YouTube Premium
   "group-youtube": {
     label: "YouTube Premium",
+    category: "Social",
     image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
     ids: [
       "social-youtube-premium-lifetime-fa",
       "social-youtube-premium-family-owner-lifetime-fa",
     ],
   },
+  // Social : ChatGPT
   "group-chatgpt": {
     label: "ChatGPT",
+    category: "Social",
     image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
     ids: [
       "social-chatgpt-plus-fa-1month",
       "social-chatgpt-go-fa-1year",
     ],
   },
+  // Social : Streaming+ (HBO, Disney+, Crunchyroll, Paramount+)
+  "group-streaming-plus": {
+    label: "Streaming+",
+    category: "Social",
+    image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    ids: [
+      "social-hbo-max",
+      "social-disney+-lifetime",
+      "social-crunchyroll-lifetime-[megafan]",
+      "social-paramount+-lifetime",
+    ],
+  },
 };
 
-// IDs qui font partie d'un groupe (on les cache de la grille principale)
+// IDs cachés de la grille principale
 const GROUPED_IDS = new Set(Object.values(PRODUCT_GROUPS).flatMap((g) => g.ids));
 
 const DISCORD_TICKET = "https://discord.com/channels/1476550378987454534/1476973014460530718";
@@ -65,53 +124,155 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
-
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   visible: { y: 0, opacity: 1, transition: { duration: 0.5, ease: "circOut" as const } }
 };
 
+// ─── COMPOSANT BADGE STOCK ────────────────────────────────────────────────────
+const StockBadge = ({ stock, t }: { stock: number; t: any }) => {
+  const isOut = stock === 0;
+  return (
+    <div className={`absolute top-4 right-4 px-4 py-1.5 rounded-full backdrop-blur-md border text-xs font-bold uppercase tracking-tight flex items-center gap-2 shadow-lg shadow-black/20 ${
+      isOut ? "bg-[#030711]/80 border-red-500/40 text-red-400" : "bg-[#030711]/80 border-white/10 text-white"
+    }`}>
+      <div className={`w-1.5 h-1.5 rounded-full ${isOut ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
+      {isOut ? (t.outOfStock || "Out of Stock") : `${stock} ${t.inStock || "in stock"}`}
+    </div>
+  );
+};
+
+// ─── COMPOSANT VUE VARIANTES (expandée) ───────────────────────────────────────
+const GroupVariantsView = ({
+  group,
+  groupProducts,
+  settings,
+  t,
+  onClose,
+}: {
+  group: { label: string; category: string; ids: string[] };
+  groupProducts: any[];
+  settings: any;
+  t: any;
+  onClose: () => void;
+}) => (
+  <motion.div
+    key="variants"
+    initial={{ opacity: 0, scale: 0.97 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.97 }}
+    className="md:col-span-2 lg:col-span-3 xl:col-span-4 bg-white/[0.02] border border-primary/20 rounded-[2rem] overflow-hidden"
+  >
+    {/* Header */}
+    <div className="p-6 border-b border-white/[0.05] flex items-center gap-4">
+      <button
+        onClick={onClose}
+        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold text-sm"
+      >
+        <ChevronLeft className="w-5 h-5" />
+        {t.back || "Retour"}
+      </button>
+      <span className="text-white font-black text-lg">{group.label}</span>
+      <span className="text-slate-500 text-sm">— {groupProducts.length} {t.options || "options"}</span>
+    </div>
+
+    {/* Grille variantes */}
+    <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {groupProducts.map((product: any) => {
+        const isOut = (product.stock ?? 0) === 0;
+        const name = t[product.nameKey] || product.nameKey;
+        return (
+          <motion.div
+            key={product.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-3 hover:border-primary/30 transition-all"
+          >
+            {/* Nom + stock */}
+            <div className="flex items-start justify-between gap-2">
+              <h4 className="text-white font-black text-sm leading-tight flex-1">{name}</h4>
+              <div className={`shrink-0 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase flex items-center gap-1 ${
+                isOut ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400"
+              }`}>
+                <div className={`w-1 h-1 rounded-full ${isOut ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
+                {isOut ? (t.outOfStock || "Out") : product.stock}
+              </div>
+            </div>
+
+            {/* Prix */}
+            <div className="flex flex-col gap-1">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-3 py-1.5 flex justify-between items-center">
+                <span className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">PayPal</span>
+                <span className="text-sm font-black text-white">€{product.pricePayPal.toFixed(2)}</span>
+              </div>
+              <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-1.5 flex justify-between items-center">
+                <span className="text-[10px] font-black text-orange-400 uppercase tracking-tighter">LTC</span>
+                <span className="text-sm font-black text-white">€{product.pricePayPal.toFixed(2)}</span>
+              </div>
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-1.5 flex justify-between items-center">
+                <span className="text-[10px] font-black text-green-400 uppercase tracking-tighter">PSC</span>
+                <span className="text-sm font-black text-white">€{(product.pricePSC * (1 + settings.pscFeePercent / 100)).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Bouton */}
+            <a href={DISCORD_TICKET} target="_blank" rel="noopener noreferrer">
+              <Button className="w-full h-10 bg-[#5865F2] hover:bg-[#4752C4] text-white font-black rounded-xl flex items-center justify-center gap-2 text-xs transition-all shadow-lg shadow-[#5865F2]/20">
+                <DiscordIcon className="w-3.5 h-3.5 shrink-0" />
+                {t.openTicket || "Ouvrir un ticket"}
+              </Button>
+            </a>
+          </motion.div>
+        );
+      })}
+    </div>
+  </motion.div>
+);
+
+// ─── PAGE PRINCIPALE ───────────────────────────────────────────────────────────
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("All");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
-  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const { language } = useLanguage();
-  const t = translations[language as keyof typeof translations] || translations.en;
+  const t = (translations[language as keyof typeof translations] || translations.en) as any;
   const { addToCart } = useCart();
   const settings = getSettings();
   const [, navigate] = useLocation();
   const [productPaymentMethods, setProductPaymentMethods] = useState<Record<string, { method: 'paypal' | 'ltc' | 'paysafecard'; email?: string; pin?: string; quantity: number }>>({});
 
-  useEffect(() => {
-    setProducts(getProducts());
-  }, []);
+  useEffect(() => { setProducts(getProducts()); }, []);
 
   const categories = ["All", ...Array.from(new Set(products.map((p: any) => p.columnId.toString())))];
 
+  // Produits individuels (pas dans un groupe)
   const filteredProducts = products.filter((product: any) => {
     if (GROUPED_IDS.has(product.id)) return false;
-    const name = (t as any)[product.nameKey] || product.nameKey;
+    const name = t[product.nameKey] || product.nameKey;
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.id.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTag = selectedTag === "All" || product.columnId === selectedTag;
     return matchesSearch && matchesTag;
   });
 
+  // Groupes visibles selon filtre de catégorie
   const visibleGroups = Object.entries(PRODUCT_GROUPS).filter(([, group]) => {
-    if (selectedTag !== "All" && selectedTag !== "Social") return false;
-    if (searchQuery) {
-      return group.label.toLowerCase().includes(searchQuery.toLowerCase());
-    }
+    const categoryMatch = selectedTag === "All" || selectedTag === group.category;
+    if (!categoryMatch) return false;
+    if (searchQuery) return group.label.toLowerCase().includes(searchQuery.toLowerCase());
     return true;
   });
+
+  const handleGroupClick = (groupId: string) => {
+    navigate(`/product/${groupId}`);
+  };
 
   const handleAddToCart = (product: any, silent = false) => {
     const state = productPaymentMethods[product.id] || { method: 'paypal', quantity: 1 };
     const { method, email, pin } = state;
     if (method === 'paysafecard' && !pin && !silent) {
-      toast.error((t as any).enterPscPin || 'Veuillez entrer votre code PIN Paysafecard');
+      toast.error(t.enterPscPin || 'Veuillez entrer votre code PIN Paysafecard');
       setExpandedProductId(product.id);
       return;
     }
@@ -126,10 +287,10 @@ export default function Home() {
       pscFeePercent: settings.pscFeePercent,
       buyerEmail: email || '',
       paysafecardPin: pin,
-      productName: (t as any)[product.nameKey] || product.nameKey,
+      productName: t[product.nameKey] || product.nameKey,
       productImage: product.image,
     });
-    if (!silent) toast.success((t as any).addedToCart || 'Ajouté au panier !');
+    if (!silent) toast.success(t.addedToCart || 'Ajouté au panier !');
     setProductPaymentMethods(prev => ({ ...prev, [product.id]: { method: 'paypal', quantity: 1 } }));
     setExpandedProductId(null);
   };
@@ -140,29 +301,10 @@ export default function Home() {
   };
 
   const scrollToStore = () => {
-    const storeSection = document.getElementById('store');
-    if (storeSection) storeSection.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('store')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const totalVisible = filteredProducts.length + visibleGroups.length;
-
-  // Helper: stock badge
-  const StockBadge = ({ stock }: { stock: number }) => {
-    const isOut = stock === 0;
-    return (
-      <div className={`absolute top-4 right-4 px-4 py-1.5 rounded-full backdrop-blur-md border text-xs font-bold uppercase tracking-tight flex items-center gap-2 shadow-lg shadow-black/20 ${
-        isOut
-          ? "bg-[#030711]/80 border-red-500/40 text-red-400"
-          : "bg-[#030711]/80 border-white/10 text-white"
-      }`}>
-        <div className={`w-1.5 h-1.5 rounded-full ${isOut ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
-        {isOut
-          ? ((t as any).outOfStock || "Out of Stock")
-          : `${stock} ${(t as any).inStock || "in stock"}`
-        }
-      </div>
-    );
-  };
 
   return (
     <div className="w-full bg-[#030711] overflow-x-hidden relative">
@@ -172,7 +314,7 @@ export default function Home() {
         <div className="absolute top-[450px] bottom-0 w-full bg-white/[0.01] backdrop-blur-[20px]" />
       </div>
 
-      {/* Hero Section */}
+      {/* ── HERO ── */}
       <section className="relative min-h-screen flex items-center pt-20 overflow-hidden z-10">
         <div className="absolute inset-0 z-0">
           <div className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[150px] rounded-full animate-pulse" />
@@ -183,29 +325,30 @@ export default function Home() {
           <motion.div initial="hidden" animate="visible" variants={containerVariants} className="max-w-5xl mx-auto text-center space-y-10">
             <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-md shadow-2xl">
               <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
-              <span className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-400">{(t as any).heroBadge || "NOUVELLE COLLECTION 2026 DISPONIBLE"}</span>
+              <span className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-400">{t.heroBadge || "NOUVELLE COLLECTION 2026 DISPONIBLE"}</span>
             </motion.div>
             <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.85] text-white">
-              {(t as any).heroTitle ? (t as any).heroTitle.split(' ').slice(0, -1).join(' ') : "Axa"} <span className="gradient-text">{(t as any).heroTitle ? (t as any).heroTitle.split(' ').slice(-1) : "Shop"}</span>
+              {t.heroTitle ? t.heroTitle.split(' ').slice(0, -1).join(' ') : "Axa"}{" "}
+              <span className="gradient-text">{t.heroTitle ? t.heroTitle.split(' ').slice(-1) : "Shop"}</span>
             </motion.h1>
             <motion.p variants={itemVariants} className="text-xl md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed font-medium">
-              {(t as any).heroDesc || "Le meilleur marché pour vos besoins numériques. Comptes premium, services et outils au meilleur prix."}
+              {t.heroDesc || "Le meilleur marché pour vos besoins numériques."}
             </motion.p>
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-6">
               <Button size="lg" onClick={scrollToStore} className="h-16 px-10 bg-primary hover:bg-primary/90 text-white font-black text-lg rounded-2xl shadow-[0_0_40px_-10px_rgba(59,130,246,0.5)] transition-all hover:scale-105 active:scale-95 group">
-                {(t as any).exploreStore || "Explorer le catalogue"}
+                {t.exploreStore || "Explorer le catalogue"}
                 <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button variant="outline" size="lg" className="h-16 px-10 border-white/10 text-white hover:bg-white/5 font-black text-lg rounded-2xl backdrop-blur-sm transition-all" asChild>
-                <a href="/vouchers">{(t as any).viewVouchers || "Voir les Vouchers"}</a>
+                <a href="/vouchers">{t.viewVouchers || "Voir les Vouchers"}</a>
               </Button>
             </motion.div>
             <motion.div variants={itemVariants} className="pt-16 grid grid-cols-2 md:grid-cols-4 gap-8">
               {[
-                { icon: <ShieldCheck className="w-6 h-6 text-primary" />, label: (t as any).securePayments || "Paiements Sécurisés" },
-                { icon: <Zap className="w-6 h-6 text-primary" />, label: (t as any).instantDelivery || "Livraison Instantanée" },
-                { icon: <Lock className="w-6 h-6 text-primary" />, label: (t as any).encryptedData || "Données Chiffrées" },
-                { icon: <Star className="w-6 h-6 text-primary" />, label: (t as any).topRatedService || "Service Mieux Noté" }
+                { icon: <ShieldCheck className="w-6 h-6 text-primary" />, label: t.securePayments || "Paiements Sécurisés" },
+                { icon: <Zap className="w-6 h-6 text-primary" />, label: t.instantDelivery || "Livraison Instantanée" },
+                { icon: <Lock className="w-6 h-6 text-primary" />, label: t.encryptedData || "Données Chiffrées" },
+                { icon: <Star className="w-6 h-6 text-primary" />, label: t.topRatedService || "Service Mieux Noté" }
               ].map((item, i) => (
                 <div key={i} className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl bg-white/[0.05] border border-white/10 backdrop-blur-sm hover:bg-white/[0.08] transition-all group">
                   <div className="p-3 rounded-xl bg-primary/10 group-hover:scale-110 transition-transform">{item.icon}</div>
@@ -217,29 +360,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Store Section */}
+      {/* ── STORE ── */}
       <section id="store" className="py-32 relative z-30">
         <div className="container">
           <div className="max-w-7xl mx-auto">
-            {/* Store Header */}
+
+            {/* Header store */}
             <div className="flex flex-col lg:flex-row justify-between items-end gap-12 mb-20">
               <div className="space-y-6 max-w-2xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
                   <Layers className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-black tracking-widest uppercase text-primary">{(t as any).digitalInventory || "INVENTAIRE NUMÉRIQUE"}</span>
+                  <span className="text-[10px] font-black tracking-widest uppercase text-primary">{t.digitalInventory || "INVENTAIRE NUMÉRIQUE"}</span>
                 </div>
-                <h2 className="text-5xl md:text-6xl font-black tracking-tighter text-white">
-                  {(t as any).storeTitle || "Notre Collection"}
-                </h2>
-                <p className="text-lg text-slate-400 leading-relaxed font-medium">
-                  {(t as any).storeDesc || "Produits premium sélectionnés pour les utilisateurs les plus exigeants."}
-                </p>
+                <h2 className="text-5xl md:text-6xl font-black tracking-tighter text-white">{t.storeTitle || "Notre Collection"}</h2>
+                <p className="text-lg text-slate-400 leading-relaxed font-medium">{t.storeDesc || "Produits premium sélectionnés pour les utilisateurs les plus exigeants."}</p>
               </div>
               <div className="w-full lg:w-auto space-y-6">
                 <div className="relative group">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-primary transition-colors" />
                   <Input
-                    placeholder={(t as any).searchPlaceholder || "Rechercher un produit..."}
+                    placeholder={t.searchPlaceholder || "Rechercher un produit..."}
                     className="h-16 pl-12 pr-6 bg-white/[0.02] border-white/10 rounded-2xl w-full lg:w-[400px] focus:ring-primary/20 focus:border-primary/30 transition-all text-white font-medium"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -249,7 +389,7 @@ export default function Home() {
                   {categories.map((tag) => (
                     <button
                       key={tag}
-                      onClick={() => setSelectedTag(tag)}
+                      onClick={() => { setSelectedTag(tag); setOpenGroupId(null); }}
                       className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
                         selectedTag === tag
                           ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
@@ -263,139 +403,54 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Products Grid */}
+            {/* ── GRILLE PRODUITS ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 
-              {/* === CARTES GROUPES (Netflix, Prime, YouTube, ChatGPT) === */}
+              {/* CARTES GROUPÉES → navigation vers /product/:groupId */}
               {visibleGroups.map(([groupId, group]) => {
-                const isOpen = openGroupId === groupId;
                 const groupProducts = products.filter(p => group.ids.includes(p.id));
-                const minPrice = Math.min(...groupProducts.map(p => p.pricePayPal));
+                const minPrice = groupProducts.length > 0
+                  ? Math.min(...groupProducts.map(p => p.pricePayPal))
+                  : 0;
 
                 return (
-                  <AnimatePresence key={groupId} mode="wait">
-                    {!isOpen ? (
-                      /* Carte mère */
-                      <motion.div
-                        key="card"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full cursor-pointer"
-                        onClick={() => setOpenGroupId(groupId)}
-                      >
-                        <div className="aspect-[4/3] overflow-hidden relative">
-                          <img src={group.image} alt={group.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
-                          <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">
-                            Social
-                          </div>
-                          <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-[10px] font-black text-primary uppercase tracking-tighter">
-                            {groupProducts.length} {(t as any).options || "options"}
-                          </div>
-                        </div>
-                        <div className="p-8 flex flex-col flex-1">
-                          <h3 className="text-xl font-bold text-white leading-tight group-hover:text-primary transition-colors mb-2">
-                            {group.label}
-                          </h3>
-                          <p className="text-sm text-slate-400 mb-8 font-medium">
-                            {groupProducts.length} {(t as any).variantsAvailable || "variantes disponibles"} — {(t as any).from || "à partir de"} €{minPrice.toFixed(2)}
-                          </p>
-                          <div className="mt-auto pt-6 border-t border-white/[0.05]">
-                            <Button className="w-full h-12 bg-white/[0.05] hover:bg-primary/20 text-white font-black rounded-2xl transition-all border border-white/10 hover:border-primary/40 flex items-center justify-center gap-2">
-                              {(t as any).seeOptions || "Voir les options"}
-                              <ChevronRight className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      /* Vue variantes (remplace la carte mère) */
-                      <motion.div
-                        key="variants"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="md:col-span-2 lg:col-span-3 xl:col-span-4 bg-white/[0.02] border border-primary/20 rounded-[2rem] overflow-hidden transition-all duration-500"
-                      >
-                        {/* Header groupe ouvert */}
-                        <div className="p-6 border-b border-white/[0.05] flex items-center gap-4">
-                          <button
-                            onClick={() => setOpenGroupId(null)}
-                            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold text-sm"
-                          >
-                            <ChevronLeft className="w-5 h-5" />
-                            {(t as any).back || "Retour"}
-                          </button>
-                          <span className="text-white font-black text-lg">{group.label}</span>
-                          <span className="text-slate-500 text-sm">— {groupProducts.length} {(t as any).options || "options"}</span>
-                        </div>
-
-                        {/* Grille des variantes */}
-                        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {groupProducts.map((product: any) => {
-                            const isOut = (product.stock ?? 0) === 0;
-                            return (
-                              <motion.div
-                                key={product.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-4 hover:border-primary/30 transition-all"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1">
-                                    <h4 className="text-white font-black text-base leading-tight mb-1">
-                                      {(t as any)[product.nameKey] || product.nameKey}
-                                    </h4>
-                                    <p className="text-slate-500 text-xs">
-                                      {(t as any)[product.descKey] || product.descKey}
-                                    </p>
-                                  </div>
-                                  {/* Stock badge inline */}
-                                  <div className={`shrink-0 px-2 py-1 rounded-full border text-[10px] font-black uppercase tracking-tighter flex items-center gap-1 ${
-                                    isOut
-                                      ? "bg-red-500/10 border-red-500/30 text-red-400"
-                                      : "bg-green-500/10 border-green-500/30 text-green-400"
-                                  }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${isOut ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
-                                    {isOut ? ((t as any).outOfStock || "Out of Stock") : `${product.stock}`}
-                                  </div>
-                                </div>
-
-                                {/* Prix */}
-                                <div className="flex flex-col gap-1.5">
-                                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2 flex justify-between items-center">
-                                    <p className="text-xs font-black text-blue-400 uppercase tracking-tighter">PayPal</p>
-                                    <p className="text-sm font-black text-white">€{product.pricePayPal.toFixed(2)}</p>
-                                  </div>
-                                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2 flex justify-between items-center">
-                                    <p className="text-xs font-black text-orange-400 uppercase tracking-tighter">LTC</p>
-                                    <p className="text-sm font-black text-white">€{product.pricePayPal.toFixed(2)}</p>
-                                  </div>
-                                  <div className="bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2 flex justify-between items-center">
-                                    <p className="text-xs font-black text-green-400 uppercase tracking-tighter">PSC</p>
-                                    <p className="text-sm font-black text-white">€{(product.pricePSC * (1 + settings.pscFeePercent / 100)).toFixed(2)}</p>
-                                  </div>
-                                </div>
-
-                                {/* Bouton ticket */}
-                                <a href={DISCORD_TICKET} target="_blank" rel="noopener noreferrer">
-                                  <Button className="w-full h-11 bg-[#5865F2] hover:bg-[#4752C4] text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#5865F2]/20">
-                                    <DiscordIcon className="w-4 h-4 shrink-0" />
-                                    {(t as any).openTicket || "Ouvrir un ticket"}
-                                  </Button>
-                                </a>
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <motion.div
+                    key={groupId}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full cursor-pointer"
+                    onClick={() => handleGroupClick(groupId)}
+                  >
+                    <div className="aspect-[4/3] overflow-hidden relative">
+                      <img src={group.image} alt={group.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
+                      <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">
+                        {group.category}
+                      </div>
+                      <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-[10px] font-black text-primary uppercase tracking-tighter">
+                        {groupProducts.length} {t.options || "options"}
+                      </div>
+                    </div>
+                    <div className="p-8 flex flex-col flex-1">
+                      <h3 className="text-xl font-bold text-white leading-tight group-hover:text-primary transition-colors mb-2">
+                        {group.label}
+                      </h3>
+                      <p className="text-sm text-slate-400 mb-8 font-medium">
+                        {groupProducts.length} {t.variantsAvailable || "variantes"} — {t.from || "à partir de"} €{minPrice.toFixed(2)}
+                      </p>
+                      <div className="mt-auto pt-6 border-t border-white/[0.05]">
+                        <Button className="w-full h-12 bg-white/[0.05] hover:bg-primary/20 text-white font-black rounded-2xl transition-all border border-white/10 hover:border-primary/40 flex items-center justify-center gap-2">
+                          {t.seeOptions || "Voir les options"}
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
                 );
               })}
 
-              {/* === PRODUITS INDIVIDUELS (tous les autres) === */}
+
+              {/* PRODUITS INDIVIDUELS */}
               {filteredProducts.map((product: any) => {
                 const isOut = (product.stock ?? 0) === 0;
                 return (
@@ -408,48 +463,43 @@ export default function Home() {
                     <div className="aspect-[4/3] overflow-hidden relative">
                       <img
                         src={product.image}
-                        alt={(t as any)[product.nameKey] || product.nameKey}
+                        alt={t[product.nameKey] || product.nameKey}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
                       <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">
                         {product.columnId}
                       </div>
-                      {/* Stock badge — rouge si 0 */}
-                      <StockBadge stock={product.stock ?? 0} />
+                      <StockBadge stock={product.stock ?? 0} t={t} />
                     </div>
                     <div className="p-8 flex flex-col flex-1">
-                      <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-xl font-bold text-white leading-tight group-hover:text-primary transition-colors">
-                          {(t as any)[product.nameKey] || product.nameKey}
-                        </h3>
-                      </div>
-                      <p className="text-sm text-slate-400 leading-relaxed mb-8 line-clamp-2 font-medium">
-                        {(t as any)[product.descKey] || product.descKey}
+                      <h3 className="text-xl font-bold text-white leading-tight group-hover:text-primary transition-colors mb-3">
+                        {t[product.nameKey] || product.nameKey}
+                      </h3>
+                      <p className="text-sm text-slate-400 leading-relaxed mb-6 line-clamp-2 font-medium">
+                        {t[product.descKey] || product.descKey}
                       </p>
                       <div className="mt-auto pt-6 border-t border-white/[0.05] space-y-4">
                         <div className="flex flex-col gap-2">
                           <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex justify-between items-center">
                             <p className="text-xs font-black text-blue-400 uppercase tracking-tighter">PayPal</p>
-                            <p className="text-base font-black text-white whitespace-nowrap">€{product.pricePayPal.toFixed(2)}</p>
+                            <p className="text-base font-black text-white">€{product.pricePayPal.toFixed(2)}</p>
                           </div>
                           <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex justify-between items-center">
                             <p className="text-xs font-black text-orange-400 uppercase tracking-tighter">LTC</p>
-                            <p className="text-base font-black text-white whitespace-nowrap">€{product.pricePayPal.toFixed(2)}</p>
+                            <p className="text-base font-black text-white">€{product.pricePayPal.toFixed(2)}</p>
                           </div>
                           <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 flex justify-between items-center">
                             <p className="text-xs font-black text-green-400 uppercase tracking-tighter">PSC</p>
-                            <p className="text-base font-black text-white whitespace-nowrap">€{(product.pricePSC * (1 + settings.pscFeePercent / 100)).toFixed(2)}</p>
+                            <p className="text-base font-black text-white">€{(product.pricePSC * (1 + settings.pscFeePercent / 100)).toFixed(2)}</p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <a href={DISCORD_TICKET} target="_blank" rel="noopener noreferrer" className="flex-1">
-                            <Button className="w-full h-12 bg-[#5865F2] hover:bg-[#4752C4] text-white font-black rounded-2xl transition-all shadow-lg shadow-[#5865F2]/20 flex items-center justify-center gap-2">
-                              <DiscordIcon className="w-4 h-4 shrink-0" />
-                              {(t as any).openTicket || "Ouvrir un ticket"}
-                            </Button>
-                          </a>
-                        </div>
+                        <a href={DISCORD_TICKET} target="_blank" rel="noopener noreferrer" className="block">
+                          <Button className="w-full h-12 bg-[#5865F2] hover:bg-[#4752C4] text-white font-black rounded-2xl transition-all shadow-lg shadow-[#5865F2]/20 flex items-center justify-center gap-2">
+                            <DiscordIcon className="w-4 h-4 shrink-0" />
+                            {t.openTicket || "Ouvrir un ticket"}
+                          </Button>
+                        </a>
                       </div>
                     </div>
                   </motion.div>
@@ -457,14 +507,14 @@ export default function Home() {
               })}
             </div>
 
-            {/* Empty State */}
+            {/* Empty state */}
             {totalVisible === 0 && (
               <div className="text-center py-40 glass-card rounded-[3rem] border-dashed border-white/10">
                 <Search className="w-16 h-16 text-slate-700 mx-auto mb-6" />
-                <h3 className="text-2xl font-bold text-white mb-2">{(t as any).noProductsFound || "Aucun produit trouvé"}</h3>
-                <p className="text-slate-500">{(t as any).tryAdjustingSearch || "Essayez d'ajuster votre recherche ou vos filtres."}</p>
-                <Button variant="link" className="mt-4 text-primary font-bold" onClick={() => { setSearchQuery(""); setSelectedTag("All"); }}>
-                  {(t as any).clearFilters || "Effacer les filtres"}
+                <h3 className="text-2xl font-bold text-white mb-2">{t.noProductsFound || "Aucun produit trouvé"}</h3>
+                <p className="text-slate-500">{t.tryAdjustingSearch || "Essayez d'ajuster votre recherche ou vos filtres."}</p>
+                <Button variant="link" className="mt-4 text-primary font-bold" onClick={() => { setSearchQuery(""); setSelectedTag("All"); setOpenGroupId(null); }}>
+                  {t.clearFilters || "Effacer les filtres"}
                 </Button>
               </div>
             )}
@@ -472,20 +522,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Expanded Product Modal */}
+      {/* ── MODAL PRODUIT INDIVIDUEL ── */}
       <AnimatePresence>
         {expandedProductId && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
             onClick={() => setExpandedProductId(null)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               className="glass-card rounded-[2.5rem] border-white/[0.05] p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
@@ -497,8 +543,8 @@ export default function Home() {
                   <div className="space-y-6">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h2 className="text-3xl font-black text-white mb-2">{(t as any)[product.nameKey] || product.nameKey}</h2>
-                        <p className="text-slate-400">{(t as any)[product.descKey] || product.descKey}</p>
+                        <h2 className="text-3xl font-black text-white mb-2">{t[product.nameKey] || product.nameKey}</h2>
+                        <p className="text-slate-400">{t[product.descKey] || product.descKey}</p>
                       </div>
                       <Button variant="ghost" size="icon" onClick={() => setExpandedProductId(null)} className="text-slate-400 hover:text-white">
                         <X className="w-5 h-5" />
@@ -515,7 +561,7 @@ export default function Home() {
                       onPaysafecardPinChange={(pin) => setProductPaymentMethods(prev => ({ ...prev, [product.id]: { ...state, pin } }))}
                     />
                     <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{(t as any).quantity || "Quantité"}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.quantity || "Quantité"}</p>
                       <div className="flex items-center gap-4 bg-white/[0.02] border border-white/10 rounded-2xl p-4 w-fit">
                         <Button size="icon" variant="ghost" onClick={() => setProductPaymentMethods(prev => ({ ...prev, [product.id]: { ...state, quantity: Math.max(1, state.quantity - 1) } }))} className="text-slate-400 hover:text-white">
                           <Minus className="w-4 h-4" />
@@ -530,7 +576,7 @@ export default function Home() {
                       <a href={DISCORD_TICKET} target="_blank" rel="noopener noreferrer" className="flex-1">
                         <Button className="w-full h-14 bg-[#5865F2] hover:bg-[#4752C4] text-white font-black rounded-2xl flex items-center justify-center gap-2">
                           <DiscordIcon className="w-5 h-5 shrink-0" />
-                          {(t as any).openTicket || "Ouvrir un ticket"}
+                          {t.openTicket || "Ouvrir un ticket"}
                         </Button>
                       </a>
                     </div>
@@ -542,14 +588,14 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* Features Section */}
+      {/* ── FEATURES ── */}
       <section className="py-32 relative">
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { title: (t as any).featureSecure || "Sécurisé", desc: (t as any).featureSecureDesc || "Vos données sont chiffrées et jamais partagées.", icon: <ShieldCheck className="w-8 h-8 text-primary" /> },
-              { title: (t as any).featureInstant || "Instantané", desc: (t as any).featureInstantDesc || "Recevez vos produits immédiatement après l'achat.", icon: <Zap className="w-8 h-8 text-blue-400" /> },
-              { title: (t as any).featureSupport || "Support", desc: (t as any).featureSupportDesc || "Une équipe dédiée pour vous aider 24/7.", icon: <Star className="w-8 h-8 text-indigo-400" /> }
+              { title: t.featureSecure || "Sécurisé", desc: t.featureSecureDesc || "Vos données sont chiffrées.", icon: <ShieldCheck className="w-8 h-8 text-primary" /> },
+              { title: t.featureInstant || "Instantané", desc: t.featureInstantDesc || "Recevez vos produits immédiatement.", icon: <Zap className="w-8 h-8 text-blue-400" /> },
+              { title: t.featureSupport || "Support", desc: t.featureSupportDesc || "Une équipe dédiée 24/7.", icon: <Star className="w-8 h-8 text-indigo-400" /> }
             ].map((feature, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-card p-10 rounded-[2.5rem] border-white/[0.05] hover:border-white/10 transition-all group">
                 <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500">
