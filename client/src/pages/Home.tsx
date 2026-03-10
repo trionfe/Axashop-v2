@@ -54,6 +54,45 @@ export const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids:
       "social-chatgpt-go-fa-1year",
     ],
   },
+  "group-disneyplus": {
+    label: "Disney+",
+    image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    category: "Social",
+    ids: [
+      "social-disney+-only",
+      "social-disney+-hulu",
+      "social-disney+-hulu-espn",
+      "social-disney+-lifetime",
+    ],
+  },
+  "group-crunchyroll": {
+    label: "Crunchyroll",
+    image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    category: "Social",
+    ids: [
+      "social-crunchyroll-lifetime-[fan]",
+      "social-crunchyroll-lifetime-[megafan]",
+    ],
+  },
+  "group-disneyplus": {
+    label: "Disney+",
+    image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    category: "Social",
+    ids: [
+      "social-disney+-only",
+      "social-disney+-hulu",
+      "social-disney+-hulu-espn",
+    ],
+  },
+  "group-crunchyroll": {
+    label: "Crunchyroll",
+    image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    category: "Social",
+    ids: [
+      "social-crunchyroll-lifetime-[fan]",
+      "social-crunchyroll-lifetime-[megafan]",
+    ],
+  },
   "group-discord-accounts": {
     label: "Comptes Discord",
     image: "https://images.unsplash.com/photo-1614680376739-414d95ff43df?w=800&auto=format&fit=crop&q=60",
@@ -116,7 +155,7 @@ export default function Home() {
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const { language } = useLanguage();
-  const t = translations[language as keyof typeof translations] || translations.en;
+  const t = (translations[language as keyof typeof translations] || translations.en) as any;
   const { addToCart } = useCart();
   const settings = getSettings();
   const [, navigate] = useLocation();
@@ -316,11 +355,11 @@ export default function Home() {
                         {group.label}
                       </h3>
                       <p className="text-sm text-slate-400 mb-8 font-medium">
-                        {groupProducts.length} variantes disponibles — à partir de €{minPrice.toFixed(2)}
+                        {groupProducts.length} {(t as any).variantsAvailable || "variantes disponibles"} — {(t as any).from || "à partir de"} €{minPrice.toFixed(2)}
                       </p>
                       <div className="mt-auto pt-6 border-t border-white/[0.05]">
                         <Button className="w-full h-12 bg-white/[0.05] hover:bg-primary/20 text-white font-black rounded-2xl transition-all border border-white/10 hover:border-primary/40 flex items-center justify-center gap-2">
-                          Voir les options
+                          {(t as any).seeOptions || "Voir les options"}
                           <ChevronRight className="w-4 h-4" />
                         </Button>
                       </div>
