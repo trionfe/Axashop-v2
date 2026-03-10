@@ -31,14 +31,14 @@ function getPrice(product: any, method: PayMethod, pscFee: number): string {
 }
 
 export default function ProductPage() {
-  const params = useParams<{ productId: string }>();
+  const params = useParams<{ groupId: string }>();
   const [, navigate] = useLocation();
   const { language } = useLanguage();
   const t = (translations[language as keyof typeof translations] || translations.en) as any;
   const settings = getSettings();
   const allProducts = getProducts();
 
-  const productId = params.productId;
+  const productId = params.groupId;
   const group = PRODUCT_GROUPS[productId];
   const singleProduct = !group ? allProducts.find(p => p.id === productId) : null;
   const variants = group
