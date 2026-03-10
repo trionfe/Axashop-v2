@@ -16,19 +16,32 @@ const DiscordIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-type PayMethod = "paypal" | "ltc" | "psc";
-
-const PAY_METHODS: { id: PayMethod; label: string; color: string; border: string; bg: string; dot: string }[] = [
-  { id: "paypal", label: "PayPal",      color: "text-blue-400",   border: "border-blue-500/40",   bg: "bg-blue-500/10",   dot: "bg-blue-400" },
-  { id: "ltc",    label: "Litecoin",    color: "text-orange-400", border: "border-orange-500/40", bg: "bg-orange-500/10", dot: "bg-orange-400" },
-  { id: "psc",    label: "Paysafecard", color: "text-green-400",  border: "border-green-500/40",  bg: "bg-green-500/10",  dot: "bg-green-400" },
+const PRICE_ROWS = [
+  {
+    id: "paypal",
+    label: "PayPal",
+    color: "text-blue-400",
+    border: "border-blue-500/30",
+    bg: "bg-blue-500/10",
+    getAmount: (p: any, _fee: number) => `€${p.pricePayPal.toFixed(2)}`,
+  },
+  {
+    id: "ltc",
+    label: "Litecoin",
+    color: "text-orange-400",
+    border: "border-orange-500/30",
+    bg: "bg-orange-500/10",
+    getAmount: (p: any, _fee: number) => `€${p.pricePayPal.toFixed(2)}`,
+  },
+  {
+    id: "psc",
+    label: "Paysafecard",
+    color: "text-green-400",
+    border: "border-green-500/30",
+    bg: "bg-green-500/10",
+    getAmount: (p: any, fee: number) => `€${(p.pricePSC * (1 + fee / 100)).toFixed(2)}`,
+  },
 ];
-
-function getPrice(product: any, method: PayMethod, pscFee: number): string {
-  if (method === "paypal") return `€${product.pricePayPal.toFixed(2)}`;
-  if (method === "ltc")    return `€${product.pricePayPal.toFixed(2)}`;
-  return `€${(product.pricePSC * (1 + pscFee / 100)).toFixed(2)}`;
-}
 
 export default function ProductPage() {
   const params = useParams<{ groupId: string }>();
@@ -46,7 +59,6 @@ export default function ProductPage() {
     : singleProduct ? [singleProduct] : [];
 
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
-  const [selectedMethod, setSelectedMethod] = useState<PayMethod>("paypal");
 
   useEffect(() => {
     if (variants.length > 0 && !selectedVariantId) setSelectedVariantId(variants[0].id);
@@ -60,7 +72,6 @@ export default function ProductPage() {
   if (!selectedVariant) return null;
 
   const isOut = (selectedVariant.stock ?? 0) === 0;
-  const currentPrice = getPrice(selectedVariant, selectedMethod, settings.pscFeePercent);
   const heroImage = SOCIAL_IMAGES[selectedVariant.id] || selectedVariant.image || (group ? group.image : "");
   const pageTitle = group ? group.label : (t[selectedVariant.nameKey] || selectedVariant.nameKey);
   const pageCategory = group ? group.category : selectedVariant.columnId;
@@ -136,12 +147,34 @@ export default function ProductPage() {
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.currentPrice || "Prix actuel"}</p>
+            {/* ── PRIX PAR MÉTHODE — s'anime à chaque changement de variante ── */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                {t.paymentMethodLabel || "Prix par méthode de paiement"}
+              </p>
               <AnimatePresence mode="wait">
-                <motion.p key={`${selectedVariantId}-${selectedMethod}`} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="text-5xl font-black text-primary">
-                  {currentPrice}
-                </motion.p>
+                <motion.div
+                  key={selectedVariantId}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col gap-3"
+                >
+                  {PRICE_ROWS.map((row) => (
+                    <div
+                      key={row.id}
+                      className={`flex items-center justify-between px-5 py-4 rounded-2xl border ${row.bg} ${row.border}`}
+                    >
+                      <span className={`font-black text-sm uppercase tracking-wider ${row.color}`}>
+                        {row.label}
+                      </span>
+                      <span className="font-black text-xl text-white">
+                        {row.getAmount(selectedVariant, settings.pscFeePercent)}
+                      </span>
+                    </div>
+                  ))}
+                </motion.div>
               </AnimatePresence>
             </div>
 
@@ -162,7 +195,9 @@ export default function ProductPage() {
                         </div>
                         <div className="p-3 bg-white/[0.02]">
                           <p className="text-xs font-black text-white leading-tight line-clamp-2 mb-1">{t[v.nameKey] || v.nameKey}</p>
-                          <p className={`text-sm font-black ${isSelected ? "text-primary" : "text-slate-300"}`}>{getPrice(v, selectedMethod, settings.pscFeePercent)}</p>
+                          <p className={`text-sm font-black ${isSelected ? "text-primary" : "text-slate-300"}`}>
+                            à partir de €{v.pricePayPal.toFixed(2)}
+                          </p>
                         </div>
                         {isSelected && (
                           <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
@@ -180,29 +215,6 @@ export default function ProductPage() {
                 </div>
               </div>
             )}
-
-            {/* Méthodes de paiement */}
-            <div className="space-y-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.paymentMethodLabel || "Méthode de paiement"}</p>
-              <div className="flex flex-col gap-3">
-                {PAY_METHODS.map((method) => {
-                  const price = getPrice(selectedVariant, method.id, settings.pscFeePercent);
-                  const isActive = selectedMethod === method.id;
-                  return (
-                    <button key={method.id} onClick={() => setSelectedMethod(method.id)}
-                      className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-200 ${isActive ? `${method.bg} ${method.border} shadow-lg` : "bg-white/[0.02] border-white/[0.08] hover:border-white/20"}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isActive ? `${method.border} ${method.bg}` : "border-white/20"}`}>
-                          {isActive && <div className={`w-2.5 h-2.5 rounded-full ${method.dot}`} />}
-                        </div>
-                        <span className={`font-black text-sm ${isActive ? method.color : "text-slate-400"}`}>{method.label}</span>
-                      </div>
-                      <span className={`font-black text-lg ${isActive ? "text-white" : "text-slate-400"}`}>{price}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* CTA */}
             <div className="pt-2 space-y-3">
@@ -235,6 +247,7 @@ export default function ProductPage() {
                 </p>
               )}
             </div>
+
           </motion.div>
         </div>
       </div>
