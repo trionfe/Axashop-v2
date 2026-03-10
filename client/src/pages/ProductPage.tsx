@@ -60,6 +60,11 @@ export default function ProductPage() {
 
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
 
+  // ── Scroll tout en haut à l'ouverture de la page ──
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
   useEffect(() => {
     if (variants.length > 0 && !selectedVariantId) setSelectedVariantId(variants[0].id);
   }, [variants.length]);
@@ -86,6 +91,9 @@ export default function ProductPage() {
     t.streamingFeature6 || "Remplacement garanti en cas de problème",
   ];
 
+  // Description du produit sélectionné
+  const productDescription = t[selectedVariant.descKey] || selectedVariant.descKey || `${pageTitle} — qualité premium garantie.`;
+
   return (
     <div className="min-h-screen bg-[#030711] text-white">
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -110,11 +118,12 @@ export default function ProductPage() {
               </div>
             </div>
 
+            {/* Badges */}
             <div className="grid grid-cols-3 gap-3">
               {[
                 { icon: <ShieldCheck className="w-4 h-4 text-primary" />, label: t.securePayments || "Sécurisé" },
                 { icon: <Zap className="w-4 h-4 text-yellow-400" />, label: t.instantDelivery || "Instantané" },
-                { icon: <Star className="w-4 h-4 text-indigo-400" />, label: t.topRatedService || "Fiable" },
+                { icon: <Star className="w-4 h-4 text-indigo-400" />, label: t.topRatedService || "Communauté" },
               ].map((b, i) => (
                 <div key={i} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center">
                   {b.icon}
@@ -123,17 +132,33 @@ export default function ProductPage() {
               ))}
             </div>
 
-            {isSingleStreaming && (
-              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Ce qui est inclus</p>
-                {streamingFeatures.map((f, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                    <span className="text-sm text-slate-300 font-medium">{f}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* ── DESCRIPTION — sous les badges, côté gauche ── */}
+            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Description</p>
+              {isSingleStreaming ? (
+                <div className="space-y-2">
+                  {streamingFeatures.map((f, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-300 font-medium">{f}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={selectedVariantId}
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 4 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-slate-300 text-sm leading-relaxed font-medium"
+                  >
+                    {productDescription}
+                  </motion.p>
+                </AnimatePresence>
+              )}
+            </div>
           </motion.div>
 
           {/* ── RIGHT ── */}
@@ -178,7 +203,7 @@ export default function ProductPage() {
               </AnimatePresence>
             </div>
 
-            {/* Variantes (seulement pour les groupes avec plusieurs options) */}
+            {/* ── VARIANTES ── */}
             {group && variants.length > 1 && (
               <div className="space-y-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.variant || "Variante"}</p>
@@ -216,7 +241,7 @@ export default function ProductPage() {
               </div>
             )}
 
-            {/* CTA */}
+            {/* ── CTA DISCORD ── */}
             <div className="pt-2 space-y-3">
               <a href={DISCORD_TICKET} target="_blank" rel="noopener noreferrer">
                 <Button size="lg" className="w-full h-16 bg-[#5865F2] hover:bg-[#4752C4] text-white font-black text-lg rounded-2xl flex items-center justify-center gap-3 shadow-[0_0_40px_-10px_rgba(88,101,242,0.6)] transition-all hover:scale-[1.02] active:scale-[0.98]">
@@ -227,25 +252,6 @@ export default function ProductPage() {
               <p className="text-center text-xs text-slate-600 font-medium">
                 {t.discordTicketMsg || "Un agent vous répondra rapidement sur Discord"}
               </p>
-            </div>
-
-            {/* Description */}
-            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Description</p>
-              {isSingleStreaming ? (
-                <div className="space-y-2">
-                  {streamingFeatures.map((f, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-slate-300 font-medium">{f}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-slate-300 text-sm leading-relaxed font-medium">
-                  {t[selectedVariant.descKey] || selectedVariant.descKey || `${pageTitle} — qualité premium garantie.`}
-                </p>
-              )}
             </div>
 
           </motion.div>
