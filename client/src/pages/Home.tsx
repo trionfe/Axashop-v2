@@ -54,6 +54,39 @@ export const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids:
       "social-chatgpt-go-fa-1year",
     ],
   },
+  "group-discord-accounts": {
+    label: "Comptes Discord",
+    image: "https://images.unsplash.com/photo-1614680376739-414d95ff43df?w=800&auto=format&fit=crop&q=60",
+    category: "Discord",
+    ids: [
+      "acc-2025-account",
+      "acc-2024-account",
+      "acc-2023-account",
+      "acc-2022-account",
+      "acc-2021-account",
+      "acc-2020-account",
+      "acc-2019-account",
+      "acc-2018-account",
+      "acc-2017-account",
+      "acc-2016-account",
+      "acc-2015-account",
+    ],
+  },
+  "group-discord-decorations": {
+    label: "Décorations Discord",
+    image: "https://images.unsplash.com/photo-1614680376739-414d95ff43df?w=800&auto=format&fit=crop&q=60",
+    category: "Discord",
+    ids: [
+      "deco-discord-decoration-4.99€",
+      "deco-discord-decoration-5.99€",
+      "deco-discord-decoration-6.99€",
+      "deco-discord-decoration-7.99€",
+      "deco-discord-decoration-8.49€",
+      "deco-discord-decoration-9.99€",
+      "deco-discord-decoration-11.99€",
+      "deco-random-décoration",
+    ],
+  },
 };
 
 // IDs qui font partie d'un groupe (on les cache de la grille principale)
@@ -107,7 +140,7 @@ export default function Home() {
 
   // Groupes visibles selon filtre
   const visibleGroups = Object.entries(PRODUCT_GROUPS).filter(([, group]) => {
-    if (selectedTag !== "All" && selectedTag !== "Social") return false;
+    if (selectedTag !== "All" && selectedTag !== group.category) return false;
     if (searchQuery) {
       return group.label.toLowerCase().includes(searchQuery.toLowerCase());
     }
@@ -272,7 +305,7 @@ export default function Home() {
                       <img src={group.image} alt={group.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
                       <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">
-                        Social
+                        {group.category}
                       </div>
                       <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-[10px] font-black text-primary uppercase tracking-tighter">
                         {groupProducts.length} options
