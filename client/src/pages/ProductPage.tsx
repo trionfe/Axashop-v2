@@ -102,18 +102,27 @@ export default function ProductPage() {
       </div>
 
       <div className="relative z-10 container py-10 max-w-7xl mx-auto px-4">
-        <button onClick={() => navigate("/")} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold mb-10 group">
+        <button onClick={() => navigate("/")} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold mb-8 group">
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           {t.back || "Retour"}
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
+        {/* ── TITRE + STOCK — toujours en haut sur mobile ── */}
+        <div className="mb-6 lg:hidden space-y-3">
+          <h1 className="text-3xl font-black tracking-tighter leading-tight">{pageTitle}</h1>
+          <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-bold ${isOut ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400"}`}>
+            <div className={`w-2 h-2 rounded-full ${isOut ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
+            {isOut ? (t.outOfStock || "Out of Stock") : `${selectedVariant.stock} ${t.inStock || "in stock"}`}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 items-start">
 
           {/* ── LEFT ── */}
-          <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="sticky top-24 space-y-4">
-            <div className="aspect-[16/10] rounded-[2.5rem] overflow-hidden bg-white/[0.02] border border-white/[0.06] relative">
+          <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="lg:sticky lg:top-24 space-y-4">
+            <div className="aspect-[16/10] rounded-[2rem] overflow-hidden bg-white/[0.02] border border-white/[0.06] relative">
               <img src={heroImage} alt={pageTitle} className="w-full h-full object-cover" />
-              <div className="absolute top-5 left-5 px-4 py-1.5 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-widest">
+              <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-widest">
                 {pageCategory}
               </div>
             </div>
@@ -127,13 +136,13 @@ export default function ProductPage() {
               ].map((b, i) => (
                 <div key={i} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center">
                   {b.icon}
-                  <span className="text-[10px] font-bold text-slate-400">{b.label}</span>
+                  <span className="text-[10px] font-bold text-slate-400 leading-tight">{b.label}</span>
                 </div>
               ))}
             </div>
 
-            {/* ── DESCRIPTION — sous les badges, côté gauche ── */}
-            <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
+            {/* ── DESCRIPTION ── */}
+            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Description</p>
               {isSingleStreaming ? (
                 <div className="space-y-2">
@@ -162,9 +171,10 @@ export default function ProductPage() {
           </motion.div>
 
           {/* ── RIGHT ── */}
-          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="space-y-8">
+          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="space-y-6">
 
-            <div className="space-y-4">
+            {/* Titre + stock — desktop only (caché sur mobile, déjà affiché au-dessus) */}
+            <div className="hidden lg:block space-y-4">
               <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">{pageTitle}</h1>
               <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-bold ${isOut ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400"}`}>
                 <div className={`w-2 h-2 rounded-full ${isOut ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
@@ -172,7 +182,7 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* ── PRIX PAR MÉTHODE — s'anime à chaque changement de variante ── */}
+            {/* ── PRIX PAR MÉTHODE ── */}
             <div className="space-y-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                 {t.paymentMethodLabel || "Prix par méthode de paiement"}
