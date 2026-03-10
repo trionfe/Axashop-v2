@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit2, Trash2, Save, X, Package, Settings } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Save, X, Package, Settings, Upload, Image as ImageIcon } from "lucide-react";
 import { getProducts, saveProducts, getSettings, saveSettings } from "@/lib/products";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,10 +15,22 @@ export default function AdminProducts() {
   const [isAdding, setIsAdding] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettingsLocal] = useState(getSettings());
+  const addImageRef = useRef<HTMLInputElement>(null);
+  const editImageRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setProducts(getProducts());
   }, []);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setEditForm((prev: any) => ({ ...prev, image: ev.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = () => {
     const newProducts = products.map(p => p.id === editingId ? editForm : p);
@@ -177,7 +189,29 @@ export default function AdminProducts() {
                     <Input placeholder="Prix LTC" type="number" step="0.000001" value={editForm.priceLTC} onChange={e => setEditForm({...editForm, priceLTC: e.target.value})} className="bg-white/5 border-white/10" />
                     <Input placeholder="Prix PSC (EUR)" type="number" step="0.01" value={editForm.pricePSC} onChange={e => setEditForm({...editForm, pricePSC: e.target.value})} className="bg-white/5 border-white/10" />
                     <Input placeholder="Stock" type="number" value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} className="bg-white/5 border-white/10" />
-                    <Input placeholder="URL Image" value={editForm.image} onChange={e => setEditForm({...editForm, image: e.target.value})} className="bg-white/5 border-white/10" />
+                    <div className="flex flex-col gap-2">
+                      <input ref={addImageRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      <button
+                        type="button"
+                        onClick={() => addImageRef.current?.click()}
+                        className="h-10 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 text-xs font-bold text-slate-300 hover:border-primary/50 hover:text-primary transition-all"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {editForm.image ? "Changer l'image" : "Télécharger une image"}
+                      </button>
+                      {editForm.image && (
+                        <div className="relative w-full h-16 rounded-xl overflow-hidden border border-white/10">
+                          <img src={editForm.image} alt="preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setEditForm((p: any) => ({ ...p, image: "" }))}
+                            className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-red-500/80 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 <div className="flex gap-2 justify-end">
                   <Button variant="ghost" onClick={() => setIsAdding(false)} className="text-slate-400">Annuler</Button>
@@ -203,7 +237,29 @@ export default function AdminProducts() {
                       <Input type="number" step="0.000001" value={editForm.priceLTC} onChange={e => setEditForm({...editForm, priceLTC: e.target.value})} className="bg-white/5 border-white/10" placeholder="Prix LTC" />
                       <Input type="number" step="0.01" value={editForm.pricePSC} onChange={e => setEditForm({...editForm, pricePSC: e.target.value})} className="bg-white/5 border-white/10" placeholder="Prix PSC" />
                       <Input type="number" value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} className="bg-white/5 border-white/10" placeholder="Stock" />
-                      <Input value={editForm.image} onChange={e => setEditForm({...editForm, image: e.target.value})} className="bg-white/5 border-white/10" placeholder="URL Image" />
+                      <div className="flex flex-col gap-2">
+                        <input ref={editImageRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                        <button
+                          type="button"
+                          onClick={() => editImageRef.current?.click()}
+                          className="h-10 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 text-xs font-bold text-slate-300 hover:border-primary/50 hover:text-primary transition-all"
+                        >
+                          <Upload className="w-4 h-4" />
+                          {editForm.image ? "Changer l'image" : "Télécharger une image"}
+                        </button>
+                        {editForm.image && (
+                          <div className="relative w-full h-16 rounded-xl overflow-hidden border border-white/10">
+                            <img src={editForm.image} alt="preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setEditForm((p: any) => ({ ...p, image: "" }))}
+                              className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-red-500/80 transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2 justify-end">
                       <Button size="icon" onClick={handleSave} className="bg-green-500/20 text-green-500 hover:bg-green-500 hover:text-white rounded-xl">
