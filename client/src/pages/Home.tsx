@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShieldCheck, Zap, Lock, Star, ArrowRight, Search, Layers, ShoppingCart, Plus, Minus, X, CreditCard, ChevronRight, ChevronLeft } from "lucide-react";
+import { ShieldCheck, Zap, Lock, Star, ArrowRight, Search, Layers, ShoppingCart, Plus, Minus, X, CreditCard, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/lib/translations";
@@ -12,11 +12,14 @@ import PaymentMethodSelector from "@/components/PaymentMethodSelector";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
-// Groupes de produits : une carte mère → plusieurs variantes
-const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids: string[] }> = {
+// Groupes de produits : une carte mère → plusieurs variantes sur une page dédiée
+export const SOCIAL_IMAGES: Record<string, string> = {};
+
+export const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids: string[]; category: string }> = {
   "group-netflix": {
     label: "Netflix",
     image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    category: "Social",
     ids: [
       "social-netflix-no-ads",
       "social-netflix-4k",
@@ -26,6 +29,7 @@ const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids: string
   "group-prime-video": {
     label: "Prime Video",
     image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    category: "Social",
     ids: [
       "social-prime-video-lifetime",
       "social-prime-video-6months",
@@ -35,6 +39,7 @@ const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids: string
   "group-youtube": {
     label: "YouTube Premium",
     image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    category: "Social",
     ids: [
       "social-youtube-premium-lifetime-fa",
       "social-youtube-premium-family-owner-lifetime-fa",
@@ -43,6 +48,7 @@ const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids: string
   "group-chatgpt": {
     label: "ChatGPT",
     image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    category: "Social",
     ids: [
       "social-chatgpt-plus-fa-1month",
       "social-chatgpt-go-fa-1year",
@@ -75,7 +81,6 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("All");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
-  const [openGroupId, setOpenGroupId] = useState<string | null>(null); // groupe ouvert
   const [products, setProducts] = useState<any[]>([]);
   const { language } = useLanguage();
   const t = translations[language as keyof typeof translations] || translations.en;
@@ -252,116 +257,42 @@ export default function Home() {
 
               {/* === CARTES GROUPES (Netflix, Prime, YouTube, ChatGPT) === */}
               {visibleGroups.map(([groupId, group]) => {
-                const isOpen = openGroupId === groupId;
                 const groupProducts = products.filter(p => group.ids.includes(p.id));
-                const minPrice = Math.min(...groupProducts.map(p => p.pricePayPal));
+                const minPrice = groupProducts.length > 0 ? Math.min(...groupProducts.map(p => p.pricePayPal)) : 0;
 
                 return (
-                  <AnimatePresence key={groupId} mode="wait">
-                    {!isOpen ? (
-                      /* Carte mère */
-                      <motion.div
-                        key="card"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full cursor-pointer"
-                        onClick={() => setOpenGroupId(groupId)}
-                      >
-                        <div className="aspect-[4/3] overflow-hidden relative">
-                          <img src={group.image} alt={group.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
-                          <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">
-                            Social
-                          </div>
-                          <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-[10px] font-black text-primary uppercase tracking-tighter">
-                            {groupProducts.length} options
-                          </div>
-                        </div>
-                        <div className="p-8 flex flex-col flex-1">
-                          <h3 className="text-xl font-bold text-white leading-tight group-hover:text-primary transition-colors mb-2">
-                            {group.label}
-                          </h3>
-                          <p className="text-sm text-slate-400 mb-8 font-medium">
-                            {groupProducts.length} variantes disponibles — à partir de €{minPrice.toFixed(2)}
-                          </p>
-                          <div className="mt-auto pt-6 border-t border-white/[0.05]">
-                            <Button className="w-full h-12 bg-white/[0.05] hover:bg-primary/20 text-white font-black rounded-2xl transition-all border border-white/10 hover:border-primary/40 flex items-center justify-center gap-2">
-                              Voir les options
-                              <ChevronRight className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      /* Vue variantes (remplace la carte mère) */
-                      <motion.div
-                        key="variants"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="md:col-span-2 lg:col-span-3 xl:col-span-4 bg-white/[0.02] border border-primary/20 rounded-[2rem] overflow-hidden transition-all duration-500"
-                      >
-                        {/* Header groupe ouvert */}
-                        <div className="p-6 border-b border-white/[0.05] flex items-center gap-4">
-                          <button
-                            onClick={() => setOpenGroupId(null)}
-                            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold text-sm"
-                          >
-                            <ChevronLeft className="w-5 h-5" />
-                            Retour
-                          </button>
-                          <span className="text-white font-black text-lg">{group.label}</span>
-                          <span className="text-slate-500 text-sm">— {groupProducts.length} options</span>
-                        </div>
-
-                        {/* Grille des variantes */}
-                        <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {groupProducts.map((product: any) => (
-                            <motion.div
-                              key={product.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-4 hover:border-primary/30 transition-all"
-                            >
-                              <div>
-                                <h4 className="text-white font-black text-base leading-tight mb-1">
-                                  {(t as any)[product.nameKey] || product.nameKey}
-                                </h4>
-                                <p className="text-slate-500 text-xs">
-                                  {(t as any)[product.descKey] || product.descKey}
-                                </p>
-                              </div>
-
-                              {/* Prix */}
-                              <div className="flex flex-col gap-1.5">
-                                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl px-3 py-2 flex justify-between items-center">
-                                  <p className="text-xs font-black text-blue-400 uppercase tracking-tighter">PayPal</p>
-                                  <p className="text-sm font-black text-white">€{product.pricePayPal.toFixed(2)}</p>
-                                </div>
-                                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2 flex justify-between items-center">
-                                  <p className="text-xs font-black text-orange-400 uppercase tracking-tighter">LTC</p>
-                                  <p className="text-sm font-black text-white">€{product.pricePayPal.toFixed(2)}</p>
-                                </div>
-                                <div className="bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2 flex justify-between items-center">
-                                  <p className="text-xs font-black text-green-400 uppercase tracking-tighter">PSC</p>
-                                  <p className="text-sm font-black text-white">€{(product.pricePSC * (1 + settings.pscFeePercent / 100)).toFixed(2)}</p>
-                                </div>
-                              </div>
-
-                              {/* Bouton ticket */}
-                              <a href={DISCORD_TICKET} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                                <Button className="w-full h-11 bg-[#5865F2] hover:bg-[#4752C4] text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#5865F2]/20">
-                                  <DiscordIcon className="w-4 h-4 shrink-0" />
-                                  {(t as any).openTicket || "Ouvrir un ticket"}
-                                </Button>
-                              </a>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <motion.div
+                    key={groupId}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full cursor-pointer"
+                    onClick={() => navigate(`/product/${groupId}`)}
+                  >
+                    <div className="aspect-[4/3] overflow-hidden relative">
+                      <img src={group.image} alt={group.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
+                      <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">
+                        Social
+                      </div>
+                      <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-[10px] font-black text-primary uppercase tracking-tighter">
+                        {groupProducts.length} options
+                      </div>
+                    </div>
+                    <div className="p-8 flex flex-col flex-1">
+                      <h3 className="text-xl font-bold text-white leading-tight group-hover:text-primary transition-colors mb-2">
+                        {group.label}
+                      </h3>
+                      <p className="text-sm text-slate-400 mb-8 font-medium">
+                        {groupProducts.length} variantes disponibles — à partir de €{minPrice.toFixed(2)}
+                      </p>
+                      <div className="mt-auto pt-6 border-t border-white/[0.05]">
+                        <Button className="w-full h-12 bg-white/[0.05] hover:bg-primary/20 text-white font-black rounded-2xl transition-all border border-white/10 hover:border-primary/40 flex items-center justify-center gap-2">
+                          Voir les options
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
                 );
               })}
 
