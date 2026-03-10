@@ -254,6 +254,50 @@ export const DEFAULT_PRODUCTS = [
     "stock": 29
   },
   {
+    "id": "social-disney+-only",
+    "columnId": "Social",
+    "nameKey": "prod_social_disney+_only_name",
+    "descKey": "prod_social_disney+_only_desc",
+    "pricePayPal": 2.40,
+    "priceLTC": 0.00029,
+    "pricePSC": 2.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 25
+  },
+  {
+    "id": "social-disney+-hulu",
+    "columnId": "Social",
+    "nameKey": "prod_social_disney+_hulu_name",
+    "descKey": "prod_social_disney+_hulu_desc",
+    "pricePayPal": 3.20,
+    "priceLTC": 0.00039,
+    "pricePSC": 3.50,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 20
+  },
+  {
+    "id": "social-disney+-hulu-espn",
+    "columnId": "Social",
+    "nameKey": "prod_social_disney+_hulu_espn_name",
+    "descKey": "prod_social_disney+_hulu_espn_desc",
+    "pricePayPal": 3.90,
+    "priceLTC": 0.00047,
+    "pricePSC": 4.20,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 18
+  },
+  {
+    "id": "social-crunchyroll-lifetime-[fan]",
+    "columnId": "Social",
+    "nameKey": "prod_social_crunchyroll_lifetime_[fan]_name",
+    "descKey": "prod_social_crunchyroll_lifetime_[fan]_desc",
+    "pricePayPal": 1.99,
+    "priceLTC": 0.00024,
+    "pricePSC": 2.20,
+    "image": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
+    "stock": 30
+  },
+  {
     "id": "social-crunchyroll-lifetime-[megafan]",
     "columnId": "Social",
     "nameKey": "prod_social_crunchyroll_lifetime_[megafan]_name",
