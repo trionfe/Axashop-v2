@@ -234,3 +234,32 @@ export async function updateOrderStatus(orderId: string, status: string, deliver
   }
   return null;
 }
+
+export async function updateProduct(id: number, data: any) {
+  const products = readJson('products.json');
+  const index = products.findIndex((p: any) => p.id === id);
+  if (index >= 0) {
+    products[index] = { ...products[index], ...data, updatedAt: new Date() };
+    await writeJson('products.json', products);
+    return products[index];
+  }
+  return null;
+}
+
+export async function deleteProduct(id: number) {
+  const products = readJson('products.json');
+  const filtered = products.filter((p: any) => p.id !== id);
+  await writeJson('products.json', filtered);
+  return { success: true };
+}
+
+export async function deleteColumn(id: number) {
+  const columns = readJson('columns.json');
+  const filtered = columns.filter((c: any) => c.id !== id);
+  await writeJson('columns.json', filtered);
+  return { success: true };
+}
+
+export async function getAllProductsAdmin() {
+  return readJson('products.json');
+}
