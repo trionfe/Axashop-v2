@@ -20,20 +20,49 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Helper to read JSON file
+// Charge depuis GitHub et cache localement
+async function fetchFromGitHub(filename: string) {
+  try {
+    const { data: fileData } = await octokit.repos.getContent({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: `server/data/${filename}`,
+    });
+    if (!Array.isArray(fileData) && fileData.type === 'file') {
+      const content = Buffer.from(fileData.content, 'base64').toString('utf8');
+      const parsed = JSON.parse(content);
+      fs.writeFileSync(path.join(DATA_DIR, filename), content);
+      console.log(`[GitHub] Loaded ${filename} (${parsed.length} items)`);
+      return parsed;
+    }
+  } catch (e) {
+    console.error(`[GitHub] Failed to fetch ${filename}:`, e);
+  }
+  return [];
+}
+
+// Lit en local, et si vide/absent charge depuis GitHub
+async function readJsonAsync(filename: string): Promise<any[]> {
+  const filePath = path.join(DATA_DIR, filename);
+  if (fs.existsSync(filePath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+  }
+  return await fetchFromGitHub(filename);
+}
+
+// Version sync (fallback, utilisée pour les écritures)
 function readJson(filename: string) {
   const filePath = path.join(DATA_DIR, filename);
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, '[]');
-    return [];
+  if (fs.existsSync(filePath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
   }
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(content);
-  } catch (e) {
-    console.error(`Error reading ${filename}:`, e);
-    return [];
-  }
+  return [];
 }
 
 // Helper to write JSON file and SYNC to GitHub via API
@@ -108,23 +137,32 @@ export async function getUserByOpenId(openId: string) {
 }
 
 export async function getAllColumns() {
-  return readJson('columns.json').sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
+  const cols = await readJsonAsync('columns.json');
+  return cols.sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0));
 }
 
 export async function getColumnById(id: number) {
-  return readJson('columns.json').find((c: any) => c.id === id);
+  const cols = await readJsonAsync('columns.json');
+  return cols.find((c: any) => c.id === id);
 }
 
 export async function getVisibleProducts() {
-  return readJson('products.json').filter((p: any) => p.isVisible !== false);
+  const prods = await readJsonAsync('products.json');
+  return prods.filter((p: any) => p.isVisible !== false);
 }
 
 export async function getProductsByColumnId(columnId: number) {
-  return readJson('products.json').filter((p: any) => p.columnId === columnId);
+  const prods = await readJsonAsync('products.json');
+  return prods.filter((p: any) => p.columnId === columnId);
 }
 
 export async function getProductById(id: number) {
-  return readJson('products.json').find((p: any) => p.id === id);
+  const prods = await readJsonAsync('products.json');
+  return prods.find((p: any) => p.id === id);
+}
+
+export async function getAllProductsAdmin() {
+  return await readJsonAsync('products.json');
 }
 
 export async function getLatestStatistics() {
@@ -179,13 +217,14 @@ export async function createReview(data: any) {
 }
 
 export async function getAllReviews() {
-  return readJson('reviews.json').sort((a: any, b: any) => 
+  const reviews = await readJsonAsync('reviews.json');
+  return reviews.sort((a: any, b: any) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
 
 export async function getApprovedReviews() {
-  const reviews = readJson('reviews.json');
+  const reviews = await readJsonAsync('reviews.json');
   return reviews
     .filter((r: any) => r.isApproved !== false)
     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -214,7 +253,8 @@ export async function createOrder(data: any) {
 }
 
 export async function getAllOrders() {
-  return readJson('orders.json').sort((a: any, b: any) => 
+  const orders = await readJsonAsync('orders.json');
+  return orders.sort((a: any, b: any) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
@@ -258,8 +298,4 @@ export async function deleteColumn(id: number) {
   const filtered = columns.filter((c: any) => c.id !== id);
   await writeJson('columns.json', filtered);
   return { success: true };
-}
-
-export async function getAllProductsAdmin() {
-  return readJson('products.json');
 }
