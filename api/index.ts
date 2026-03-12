@@ -3,7 +3,7 @@ import express from "express";
 import axios from "axios";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../server/routers.js";
-import { createContext } from "../server/_core/context";
+import { createContext } from "../server/_core/context.js";
 
 const app = express();
 
