@@ -1,5 +1,5 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { User } from "../../drizzle/schema";
+type User = { id: number; openId: string; name: string | null; email: string | null; role: string; loginMethod?: string | null; createdAt: Date; updatedAt: Date; lastSignedIn: Date; };
 import { sdk } from "./sdk";
 
 export type TrpcContext = {
