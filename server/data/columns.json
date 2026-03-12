@@ -1,14 +1,7 @@
 [
-  {
-    "id": 1,
-    "name": "Social",
-    "displayOrder": 1,
-    "isActive": true
-  },
-  {
-    "id": 2,
-    "name": "Accounts",
-    "displayOrder": 2,
-    "isActive": true
-  }
+  { "id": 1, "name": "Accounts", "displayOrder": 1, "isActive": true },
+  { "id": 2, "name": "Social", "displayOrder": 2, "isActive": true },
+  { "id": 3, "name": "Discord", "displayOrder": 3, "isActive": true },
+  { "id": 4, "name": "VPN", "displayOrder": 4, "isActive": true },
+  { "id": 5, "name": "Gaming", "displayOrder": 5, "isActive": true }
 ]
