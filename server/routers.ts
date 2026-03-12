@@ -218,9 +218,57 @@ export const appRouter = router({
 
   // Admin routes
   adminGetColumns: adminProcedure.query(() => db.getAllColumns()),
-  adminGetProducts: adminProcedure.query(() => db.getVisibleProducts()),
+  adminGetProducts: adminProcedure.query(() => db.getAllProductsAdmin()),
   adminGetReviews: adminProcedure.query(() => db.getAllReviews()),
   adminDeleteReview: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => await db.deleteReview(input.id)),
+
+  // Admin CRUD produits
+  adminCreateProduct: adminProcedure
+    .input(z.object({
+      columnId: z.number(),
+      nameKey: z.string(),
+      descKey: z.string().optional(),
+      pricePayPal: z.string(),
+      priceLTC: z.string(),
+      pricePSC: z.string(),
+      image: z.string().optional(),
+      stock: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => db.createProduct(input)),
+
+  adminUpdateProduct: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      columnId: z.number().optional(),
+      nameKey: z.string().optional(),
+      descKey: z.string().optional(),
+      pricePayPal: z.string().optional(),
+      priceLTC: z.string().optional(),
+      pricePSC: z.string().optional(),
+      image: z.string().optional(),
+      stock: z.number().optional(),
+      isVisible: z.boolean().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      return db.updateProduct(id, data);
+    }),
+
+  adminDeleteProduct: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => db.deleteProduct(input.id)),
+
+  // Admin CRUD catégories
+  adminGetColumns: adminProcedure.query(() => db.getAllColumns()),
+  adminCreateColumn: adminProcedure
+    .input(z.object({ name: z.string(), displayOrder: z.number().optional() }))
+    .mutation(async ({ input }) => db.createColumn(input)),
+  adminUpdateColumn: adminProcedure
+    .input(z.object({ id: z.number(), name: z.string().optional(), displayOrder: z.number().optional(), isActive: z.boolean().optional() }))
+    .mutation(async ({ input }) => db.updateColumn(input)),
+  adminDeleteColumn: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => db.deleteColumn(input.id)),
 
   // PayPal Capture route
   capturePaypalOrder: publicProcedure
