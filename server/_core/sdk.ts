@@ -4,7 +4,8 @@ import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
-import type { User } from "../../drizzle/schema";
+// User type inline (no drizzle/MySQL needed)
+type User = { id: number; openId: string; name: string | null; email: string | null; role: string; loginMethod?: string | null; createdAt: Date; updatedAt: Date; lastSignedIn: Date; };
 import * as db from "../db";
 import { ENV } from "./env";
 import type {
