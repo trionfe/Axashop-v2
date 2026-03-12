@@ -217,7 +217,6 @@ export const appRouter = router({
   }),
 
   // Admin routes
-  adminGetColumns: adminProcedure.query(() => db.getAllColumns()),
   adminGetProducts: adminProcedure.query(() => db.getAllProductsAdmin()),
   adminGetReviews: adminProcedure.query(() => db.getAllReviews()),
   adminDeleteReview: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => await db.deleteReview(input.id)),
@@ -357,23 +356,8 @@ export const appRouter = router({
       
       // Si la commande est acceptée, on pourrait envoyer un mail ici
       if (input.status === 'completed' && order) {
-        try {
-          const { transporter } = await import("./routers/paysafecard");
-          await (transporter as any).sendMail({
-            from: process.env.PAYPAL_EMAIL || "gerarbarbier17@gmail.com",
-            to: order.buyerEmail,
-            subject: `[Axa Shop] Votre commande ${order.id} est prête !`,
-            html: `
-              <h2>Votre commande est validée !</h2>
-              <p>Merci pour votre achat sur Axa Shop.</p>
-              ${input.deliveryData?.text ? `<div style="padding: 15px; background: #f3f4f6; border-radius: 8px; margin: 10px 0;"><strong>Message de l'admin :</strong><br/>${input.deliveryData.text}</div>` : ""}
-              ${input.deliveryData?.fileUrl ? `<p>Vous pouvez télécharger votre produit ici : <a href="${input.deliveryData.fileUrl}">${input.deliveryData.fileUrl}</a></p>` : ""}
-              <p>ID Commande : ${order.id}</p>
-            `,
-          });
-        } catch (e) {
-          console.error("Erreur envoi mail livraison:", e);
-        }
+        // Email désactivé (transporter supprimé)
+        console.log("[Order] Commande validée:", order?.id);
       }
       
       return order;
