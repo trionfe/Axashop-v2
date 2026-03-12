@@ -10,8 +10,8 @@ const DATA_DIR = path.join(__dirname, 'data');
 
 // Configuration GitHub
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
-const REPO_OWNER = "Anonyme-00152";
-const REPO_NAME = "Axa-shop";
+const REPO_OWNER = "trionfe";
+const REPO_NAME = "Axashop-v2";
 
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
