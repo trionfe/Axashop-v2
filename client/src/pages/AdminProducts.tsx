@@ -2,10 +2,67 @@ import { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Edit2, Trash2, Save, X, Settings, Upload } from "lucide-react";
-import { getProducts, saveProducts, getSettings, saveSettings } from "@/lib/products";
+import { Plus, Search, Edit2, Trash2, Save, X, Settings, Upload, RefreshCw } from "lucide-react";
+import { getSettings, saveSettings } from "@/lib/products";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+
+const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
+
+async function loadProducts(): Promise<any[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=*&order=id.asc`, {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+      }
+    });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    if (!rows || rows.length === 0) return [];
+    // On stocke tous les produits dans la première ligne, colonne "data"
+    return rows[0]?.data || [];
+  } catch { return []; }
+}
+
+async function saveProducts(products: any[]): Promise<boolean> {
+  try {
+    // Vérifier si une ligne existe
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    const rows = await res.json();
+
+    if (rows && rows.length > 0) {
+      // UPDATE
+      const upd = await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({ data: products })
+      });
+      return upd.ok;
+    } else {
+      // INSERT
+      const ins = await fetch(`${SUPABASE_URL}/rest/v1/Products`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal"
+        },
+        body: JSON.stringify({ data: products })
+      });
+      return ins.ok;
+    }
+  } catch { return false; }
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -18,6 +75,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettingsLocal] = useState(getSettings());
@@ -26,8 +85,19 @@ export default function AdminProducts() {
   const imageRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setProducts(getProducts());
+    loadProducts().then(p => {
+      setProducts(p);
+      setLoading(false);
+    });
   }, []);
+
+  const persist = async (newProducts: any[]) => {
+    setSaving(true);
+    const ok = await saveProducts(newProducts);
+    setSaving(false);
+    if (ok) toast.success("Sauvegardé ✅ visible partout");
+    else toast.error("Erreur de sauvegarde ❌");
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,7 +107,7 @@ export default function AdminProducts() {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const newProducts = products.map(p => p.id === form.id ? {
       ...form,
       pricePayPal: parseFloat(form.pricePayPal),
@@ -46,14 +116,13 @@ export default function AdminProducts() {
       stock: parseInt(form.stock) || 0,
     } : p);
     setProducts(newProducts);
-    saveProducts(newProducts);
     setModal(null);
-    toast.success("Produit mis à jour ✅");
+    await persist(newProducts);
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.nameKey || !form.pricePayPal) {
-      toast.error("Veuillez remplir au moins le nom et le prix PayPal");
+      toast.error("Remplir au moins le nom et le prix PayPal");
       return;
     }
     const newProd = {
@@ -66,17 +135,15 @@ export default function AdminProducts() {
     };
     const newProducts = [newProd, ...products];
     setProducts(newProducts);
-    saveProducts(newProducts);
     setModal(null);
-    toast.success("Produit ajouté ✅");
+    await persist(newProducts);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Supprimer ce produit ?")) {
       const newProducts = products.filter(p => p.id !== id);
       setProducts(newProducts);
-      saveProducts(newProducts);
-      toast.success("Produit supprimé");
+      await persist(newProducts);
     }
   };
 
@@ -86,11 +153,7 @@ export default function AdminProducts() {
     toast.success("Paramètres mis à jour");
   };
 
-  const openEdit = (product: any) => {
-    setForm({ ...product });
-    setModal("edit");
-  };
-
+  const openEdit = (product: any) => { setForm({ ...product }); setModal("edit"); };
   const openAdd = () => {
     setForm({ id: "", columnId: "Social", nameKey: "", descKey: "", pricePayPal: "0", priceLTC: "0", pricePSC: "0", image: "", stock: 29 });
     setModal("add");
@@ -108,18 +171,16 @@ export default function AdminProducts() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-1">
             <h1 className="text-4xl font-black tracking-tighter">Gestion des <span className="text-primary">Produits</span></h1>
-            <p className="text-slate-400 font-medium">Ajoutez, modifiez ou supprimez vos offres numériques.</p>
+            <p className="text-slate-400 font-medium">Sauvegardé en base — visible sur tous les appareils.</p>
           </div>
           <div className="flex gap-4">
             <Button onClick={() => setShowSettings(!showSettings)} variant="outline"
               className="h-12 px-6 border-white/10 text-white hover:bg-white/5 font-bold rounded-xl">
-              <Settings className="w-5 h-5 mr-2" />
-              Paramètres
+              <Settings className="w-5 h-5 mr-2" />Paramètres
             </Button>
             <Button onClick={openAdd}
               className="h-12 px-6 bg-white text-black hover:bg-primary hover:text-white font-bold rounded-xl shadow-xl">
-              <Plus className="w-5 h-5 mr-2" />
-              Nouveau Produit
+              <Plus className="w-5 h-5 mr-2" />Nouveau Produit
             </Button>
           </div>
         </div>
@@ -130,17 +191,11 @@ export default function AdminProducts() {
               className="glass-card p-6 rounded-3xl border-primary/30 bg-primary/5">
               <div className="space-y-4">
                 <h2 className="text-xl font-black text-white">Paramètres Globaux</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                      Pourcentage de frais Paysafecard (%)
-                    </label>
-                    <Input type="number" min="0" max="100" step="0.1"
-                      value={settings.pscFeePercent}
-                      onChange={e => setSettingsLocal({ ...settings, pscFeePercent: parseFloat(e.target.value) })}
-                      className="bg-white/5 border-white/10" />
-                    <p className="text-[10px] text-slate-400">Frais appliqués aux prix Paysafecard (par défaut: 10%)</p>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Frais Paysafecard (%)</label>
+                  <Input type="number" min="0" max="100" step="0.1" value={settings.pscFeePercent}
+                    onChange={e => setSettingsLocal({ ...settings, pscFeePercent: parseFloat(e.target.value) })}
+                    className="bg-white/5 border-white/10 max-w-xs" />
                 </div>
                 <div className="flex gap-2 justify-end">
                   <Button variant="ghost" onClick={() => setShowSettings(false)} className="text-slate-400">Annuler</Button>
@@ -155,57 +210,62 @@ export default function AdminProducts() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-primary transition-colors" />
           <Input placeholder="Rechercher par ID, Catégorie ou Nom..."
             className="h-14 pl-12 bg-white/[0.02] border-white/10 rounded-2xl"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+            value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          <AnimatePresence mode="popLayout">
-            {filteredProducts.map((product) => (
-              <motion.div key={product.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="glass-card p-6 rounded-3xl border-white/[0.05] flex flex-col gap-4 group hover:border-white/10 transition-all">
-                <div className="flex items-center gap-6 flex-1">
-                  <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.08] overflow-hidden shrink-0">
-                    {product.image && <img src={product.image} alt="" className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-3 mb-1 flex-wrap">
-                      <span className="text-xs font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-md">{product.columnId}</span>
-                      <span className="text-[10px] font-bold text-slate-500 truncate">ID: {product.id}</span>
-                      <span className="text-xs font-bold text-green-500 bg-green-500/10 px-3 py-1 rounded-md ml-auto border border-green-500/20">Stock: {product.stock || 0}</span>
+        {loading ? (
+          <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
+            <RefreshCw className="w-5 h-5 animate-spin" />
+            <span>Chargement...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            <AnimatePresence mode="popLayout">
+              {filteredProducts.map((product) => (
+                <motion.div key={product.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="glass-card p-6 rounded-3xl border-white/[0.05] flex flex-col gap-4 group hover:border-white/10 transition-all">
+                  <div className="flex items-center gap-6 flex-1">
+                    <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.08] overflow-hidden shrink-0">
+                      {product.image && <img src={product.image} alt="" className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" />}
                     </div>
-                    <h3 className="text-lg font-bold text-white truncate mb-2">{product.nameKey}</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2">
-                        <p className="text-[8px] font-black text-blue-400 uppercase">PayPal</p>
-                        <p className="text-sm font-black text-white">€{parseFloat(product.pricePayPal).toFixed(2)}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-3 mb-1 flex-wrap">
+                        <span className="text-xs font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-md">{product.columnId}</span>
+                        <span className="text-[10px] font-bold text-slate-500 truncate">ID: {product.id}</span>
+                        <span className="text-xs font-bold text-green-500 bg-green-500/10 px-3 py-1 rounded-md ml-auto border border-green-500/20">Stock: {product.stock || 0}</span>
                       </div>
-                      <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-2">
-                        <p className="text-[8px] font-black text-orange-400 uppercase">LTC</p>
-                        <p className="text-sm font-black text-white">€{parseFloat(product.priceLTC).toFixed(2)}</p>
-                      </div>
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2">
-                        <p className="text-[8px] font-black text-green-400 uppercase">PSC</p>
-                        <p className="text-sm font-black text-white">€{parseFloat(product.pricePSC).toFixed(2)}</p>
+                      <h3 className="text-lg font-bold text-white truncate mb-2">{product.nameKey}</h3>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2">
+                          <p className="text-[8px] font-black text-blue-400 uppercase">PayPal</p>
+                          <p className="text-sm font-black text-white">€{parseFloat(product.pricePayPal).toFixed(2)}</p>
+                        </div>
+                        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-2">
+                          <p className="text-[8px] font-black text-orange-400 uppercase">LTC</p>
+                          <p className="text-sm font-black text-white">€{parseFloat(product.priceLTC).toFixed(2)}</p>
+                        </div>
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2">
+                          <p className="text-[8px] font-black text-green-400 uppercase">PSC</p>
+                          <p className="text-sm font-black text-white">€{parseFloat(product.pricePSC).toFixed(2)}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 border-t border-white/10 pt-4">
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(product)}
-                    className="text-slate-400 hover:text-white hover:bg-white/5 rounded-xl">
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleDelete(product.id)}
-                    className="text-red-400 hover:bg-red-400/10 rounded-xl">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+                  <div className="flex items-center gap-2 shrink-0 border-t border-white/10 pt-4">
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(product)}
+                      className="text-slate-400 hover:text-white hover:bg-white/5 rounded-xl">
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleDelete(product.id)}
+                      className="text-red-400 hover:bg-red-400/10 rounded-xl">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* MODAL */}
@@ -215,11 +275,9 @@ export default function AdminProducts() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setModal(null)}
               className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40" />
-            <motion.div
-              initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+            <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 sm:inset-0 sm:flex sm:items-center sm:justify-center z-50 pointer-events-none"
-            >
+              className="fixed bottom-0 left-0 right-0 sm:inset-0 sm:flex sm:items-center sm:justify-center z-50 pointer-events-none">
               <div className="pointer-events-auto w-full sm:max-w-md bg-[#0d1117] border border-white/10 rounded-t-3xl sm:rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-black text-white">
@@ -236,19 +294,16 @@ export default function AdminProducts() {
                     value={form.columnId} onChange={e => setForm({ ...form, columnId: e.target.value })}
                     className="bg-white/5 border-white/10 h-11" />
                 </Field>
-
                 <Field label="Nom du produit">
                   <Input placeholder="Ex: Netflix Premium 4K"
                     value={form.nameKey} onChange={e => setForm({ ...form, nameKey: e.target.value })}
                     className="bg-white/5 border-white/10 h-11" />
                 </Field>
-
                 <Field label="Description (optionnel)">
-                  <Input placeholder="Ex: Compte à vie, accès complet..."
+                  <Input placeholder="Ex: Compte à vie..."
                     value={form.descKey || ""} onChange={e => setForm({ ...form, descKey: e.target.value })}
                     className="bg-white/5 border-white/10 h-11" />
                 </Field>
-
                 <div className="grid grid-cols-3 gap-3">
                   <Field label="💙 PayPal (€)">
                     <Input type="number" step="0.01" value={form.pricePayPal}
@@ -266,13 +321,11 @@ export default function AdminProducts() {
                       className="bg-green-500/10 border-green-500/20 h-11 text-center font-bold" />
                   </Field>
                 </div>
-
                 <Field label="Stock">
                   <Input type="number" value={form.stock}
                     onChange={e => setForm({ ...form, stock: e.target.value })}
                     className="bg-white/5 border-white/10 h-11" />
                 </Field>
-
                 <Field label="Image">
                   <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                   {form.image ? (
@@ -301,9 +354,9 @@ export default function AdminProducts() {
                     className="flex-1 h-12 text-slate-400 border border-white/10 rounded-xl">
                     Annuler
                   </Button>
-                  <Button onClick={modal === "add" ? handleAdd : handleSave}
+                  <Button onClick={modal === "add" ? handleAdd : handleSave} disabled={saving}
                     className="flex-1 h-12 bg-primary text-white font-black rounded-xl">
-                    <Save className="w-4 h-4 mr-2" /> Sauvegarder
+                    {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Sauvegarder</>}
                   </Button>
                 </div>
               </div>
