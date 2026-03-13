@@ -1,3 +1,5 @@
+// Produits avec support multi-prix (PayPal, LTC, Paysafecard)
+
 const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
 
@@ -47,6 +49,8 @@ export const DEFAULT_PRODUCTS = [
   {"id":"game-roblox-2000rbx","columnId":"Gaming","nameKey":"prod_game_roblox_2000rbx_name","descKey":"prod_game_roblox_2000rbx_desc","pricePayPal":15.00,"priceLTC":0.00180,"pricePSC":15.00,"image":"https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60","stock":29},
 ];
 
+// ── Supabase helpers ──────────────────────────────────────────────────────────
+
 async function supabaseLoad(): Promise<any[] | null> {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=*&limit=1`, {
@@ -55,16 +59,20 @@ async function supabaseLoad(): Promise<any[] | null> {
     if (!res.ok) return null;
     const rows = await res.json();
     if (!rows || rows.length === 0) return null;
-    return rows[0]?.Data || null;
+    const data = rows[0]?.Data;
+    // Validate: doit être un tableau de produits avec des vrais prix
+    if (!Array.isArray(data) || data.length === 0) return null;
+    if (typeof data[0]?.pricePayPal !== 'number' || data[0].pricePayPal === 0) return null;
+    return data;
   } catch { return null; }
 }
 
 async function supabaseSave(products: any[]): Promise<boolean> {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
+    const check = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
     });
-    const rows = await res.json();
+    const rows = await check.json();
     if (rows && rows.length > 0) {
       const upd = await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, {
         method: "PATCH",
@@ -83,17 +91,16 @@ async function supabaseSave(products: any[]): Promise<boolean> {
   } catch { return false; }
 }
 
-// Cache mémoire pour éviter trop de requêtes
 let _cache: any[] | null = null;
 
 export async function getProductsAsync(): Promise<any[]> {
   if (_cache) return _cache;
   const fromSupabase = await supabaseLoad();
-  if (fromSupabase && fromSupabase.length > 0) {
+  if (fromSupabase) {
     _cache = fromSupabase;
     return fromSupabase;
   }
-  // Supabase vide → insérer les produits par défaut
+  // Supabase vide ou données invalides → insérer les vrais produits
   await supabaseSave(DEFAULT_PRODUCTS);
   _cache = DEFAULT_PRODUCTS;
   return DEFAULT_PRODUCTS;
@@ -104,17 +111,23 @@ export async function saveProductsAsync(products: any[]): Promise<boolean> {
   return await supabaseSave(products);
 }
 
-// Compatibilité sync (fallback localStorage)
+// ── Sync fallback (utilisé par Home.tsx via getProducts) ──────────────────────
+// Charge depuis Supabase en arrière-plan et met à jour le cache
+let _syncLoaded = false;
+
 export const getProducts = () => {
-  if (typeof window === 'undefined') return DEFAULT_PRODUCTS;
-  const saved = localStorage.getItem('app_products');
-  return saved ? JSON.parse(saved) : DEFAULT_PRODUCTS;
+  if (!_syncLoaded) {
+    _syncLoaded = true;
+    // Lance le chargement Supabase en arrière-plan
+    getProductsAsync().catch(() => {});
+  }
+  // Si cache Supabase dispo, l'utiliser; sinon DEFAULT_PRODUCTS
+  return _cache || DEFAULT_PRODUCTS;
 };
 
 export const saveProducts = (products: any[]) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('app_products', JSON.stringify(products));
-  }
+  _cache = products;
+  supabaseSave(products).catch(() => {});
 };
 
 export const getSettings = () => {
