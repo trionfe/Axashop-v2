@@ -22,7 +22,7 @@ async function loadProducts(): Promise<any[]> {
     const rows = await res.json();
     if (!rows || rows.length === 0) return [];
     // On stocke tous les produits dans la première ligne, colonne "data"
-    return rows[0]?.data || [];
+    return rows[0]?.Data || [];
   } catch { return []; }
 }
 
@@ -44,7 +44,7 @@ async function saveProducts(products: any[]): Promise<boolean> {
           "Content-Type": "application/json",
           Prefer: "return=minimal"
         },
-        body: JSON.stringify({ data: products })
+        body: JSON.stringify({ Data: products })
       });
       return upd.ok;
     } else {
@@ -57,7 +57,7 @@ async function saveProducts(products: any[]): Promise<boolean> {
           "Content-Type": "application/json",
           Prefer: "return=minimal"
         },
-        body: JSON.stringify({ data: products })
+        body: JSON.stringify({ Data: products })
       });
       return ins.ok;
     }
