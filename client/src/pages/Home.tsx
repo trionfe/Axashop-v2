@@ -5,7 +5,7 @@ import { ShieldCheck, Zap, Lock, Star, ArrowRight, Search, Layers, ShoppingCart,
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/lib/translations";
-import { getProducts, getSettings } from "@/lib/products";
+import { getProductsAsync, getSettings } from "@/lib/products";
 import { useCart } from "@/contexts/CartContext";
 import PaymentMethodSelector from "@/components/PaymentMethodSelector";
 
@@ -63,25 +63,6 @@ export const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids:
       "social-disney+-hulu",
       "social-disney+-hulu-espn",
       "social-disney+-lifetime",
-    ],
-  },
-  "group-crunchyroll": {
-    label: "Crunchyroll",
-    image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
-    category: "Social",
-    ids: [
-      "social-crunchyroll-lifetime-[fan]",
-      "social-crunchyroll-lifetime-[megafan]",
-    ],
-  },
-  "group-disneyplus": {
-    label: "Disney+",
-    image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60",
-    category: "Social",
-    ids: [
-      "social-disney+-only",
-      "social-disney+-hulu",
-      "social-disney+-hulu-espn",
     ],
   },
   "group-crunchyroll": {
@@ -162,7 +143,7 @@ export default function Home() {
   const [productPaymentMethods, setProductPaymentMethods] = useState<Record<string, { method: 'paypal' | 'ltc' | 'paysafecard'; email?: string; pin?: string; quantity: number }>>({});
 
   useEffect(() => {
-    setProducts(getProducts());
+    getProductsAsync().then(setProducts);
   }, []);
 
   const categories = ["All", ...Array.from(new Set(products.map((p: any) => p.columnId.toString())))];
