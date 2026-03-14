@@ -3,6 +3,18 @@
 const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
 
+// Normalise les prix en numbers pour éviter les bugs d'affichage côté client
+function normalizeProducts(products: any[]): any[] {
+  return products.map(p => ({
+    ...p,
+    pricePayPal: parseFloat(p.pricePayPal) || 0,
+    priceLTC: parseFloat(p.priceLTC) || 0,
+    pricePSC: parseFloat(p.pricePSC) || 0,
+    stock: parseInt(p.stock) || 0,
+  }));
+}
+
+
 export const DEFAULT_PRODUCTS = [
   {"id":"acc-2025-account","columnId":"Accounts","nameKey":"prod_acc_2025_account_name","descKey":"prod_acc_2025_account_desc","pricePayPal":1.00,"priceLTC":0.00012,"pricePSC":1.00,"image":"https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60","stock":29},
   {"id":"acc-2024-account","columnId":"Accounts","nameKey":"prod_acc_2024_account_name","descKey":"prod_acc_2024_account_desc","pricePayPal":1.50,"priceLTC":0.00018,"pricePSC":2.00,"image":"https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60","stock":29},
@@ -62,8 +74,9 @@ async function supabaseLoad(): Promise<any[] | null> {
     const data = rows[0]?.Data;
     // Validate: doit être un tableau de produits avec des vrais prix
     if (!Array.isArray(data) || data.length === 0) return null;
-    if (typeof data[0]?.pricePayPal !== 'number' || data[0].pricePayPal === 0) return null;
-    return data;
+    const normalized = normalizeProducts(data);
+    if (normalized[0].pricePayPal === 0 && normalized[0].priceLTC === 0) return null;
+    return normalized;
   } catch { return null; }
 }
 
