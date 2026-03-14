@@ -331,6 +331,7 @@ export default function Home() {
               {visibleGroups.map(([groupId, group]) => {
                 const groupProducts = products.filter(p => group.ids.includes(p.id));
                 const minPrice = groupProducts.length > 0 ? Math.min(...groupProducts.map(p => p.pricePayPal)) : 0;
+                const groupImg = groupProducts[0]?.image || group.image;
 
                 return (
                   <motion.div
@@ -341,7 +342,7 @@ export default function Home() {
                     onClick={() => navigate(`/product/${groupId}`)}
                   >
                     <div className="aspect-[4/3] overflow-hidden relative">
-                      <img src={group.image} alt={group.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                      <img src={groupImg} alt={group.label} className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" style={{background:"#0a0e1a"}} />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
                       <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">
                         {group.category}
