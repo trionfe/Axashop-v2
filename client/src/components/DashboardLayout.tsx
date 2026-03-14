@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, Package, Users, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Eye, LogOut, Package, Users, ShieldCheck } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -33,6 +33,7 @@ const menuItems = [
   { icon: Package, label: "Products", path: "/admin/products" },
   { icon: Users, label: "Reviews", path: "/admin/reviews" },
   { icon: ShieldCheck, label: "Orders", path: "/admin/orders" },
+  { icon: Eye, label: "Visitors", path: "/admin/visitors" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
