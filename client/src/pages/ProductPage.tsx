@@ -5,7 +5,7 @@ import { ArrowLeft, ShieldCheck, Zap, Star, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@/lib/translations";
-import { getProducts, getSettings } from "@/lib/products";
+import { getProductsAsync, getSettings } from "@/lib/products";
 import { PRODUCT_GROUPS, SOCIAL_IMAGES } from "@/pages/Home";
 
 const DISCORD_TICKET = "https://discord.com/channels/1476550378987454534/1476973014460530718";
@@ -49,7 +49,8 @@ export default function ProductPage() {
   const { language } = useLanguage();
   const t = (translations[language as keyof typeof translations] || translations.en) as any;
   const settings = getSettings();
-  const allProducts = getProducts();
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  useEffect(() => { getProductsAsync().then(setAllProducts); }, []);
 
   const productId = params.groupId;
   const group = PRODUCT_GROUPS[productId];
