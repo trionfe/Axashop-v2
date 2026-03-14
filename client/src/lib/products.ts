@@ -104,42 +104,23 @@ async function supabaseSave(products: any[]): Promise<boolean> {
   } catch { return false; }
 }
 
-let _cache: any[] | null = null;
+// Pas de cache — toujours lire depuis Supabase pour avoir les vrais prix
 
 export async function getProductsAsync(): Promise<any[]> {
-  if (_cache) return _cache;
   const fromSupabase = await supabaseLoad();
-  if (fromSupabase) {
-    _cache = fromSupabase;
-    return fromSupabase;
-  }
-  // Supabase vide ou données invalides → insérer les vrais produits
+  if (fromSupabase) return fromSupabase;
+  // Supabase vide → insérer les produits par défaut
   await supabaseSave(DEFAULT_PRODUCTS);
-  _cache = DEFAULT_PRODUCTS;
   return DEFAULT_PRODUCTS;
 }
 
 export async function saveProductsAsync(products: any[]): Promise<boolean> {
-  _cache = products;
   return await supabaseSave(products);
 }
 
-// ── Sync fallback (utilisé par Home.tsx via getProducts) ──────────────────────
-// Charge depuis Supabase en arrière-plan et met à jour le cache
-let _syncLoaded = false;
-
-export const getProducts = () => {
-  if (!_syncLoaded) {
-    _syncLoaded = true;
-    // Lance le chargement Supabase en arrière-plan
-    getProductsAsync().catch(() => {});
-  }
-  // Si cache Supabase dispo, l'utiliser; sinon DEFAULT_PRODUCTS
-  return _cache || DEFAULT_PRODUCTS;
-};
+export const getProducts = () => DEFAULT_PRODUCTS;
 
 export const saveProducts = (products: any[]) => {
-  _cache = products;
   supabaseSave(products).catch(() => {});
 };
 
