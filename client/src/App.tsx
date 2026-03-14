@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
@@ -16,14 +17,24 @@ import Admin from "./pages/Admin";
 import AdminProducts from "./pages/AdminProducts";
 import AdminReviews from "./pages/AdminReviews";
 import AdminOrders from "./pages/AdminOrders";
+import AdminVisitors from "./pages/AdminVisitors";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import FAQ from "./pages/FAQ";
 import ProductPage from "./pages/ProductPage";
 import { useAuth } from "./_core/hooks/useAuth";
+import { trackVisit } from "./hooks/useVisitorTracker";
 
 function Router() {
   const { user } = useAuth();
+  const [location] = useLocation();
+
+  // Track visits (skip admin pages)
+  useEffect(() => {
+    if (!location.startsWith("/admin")) {
+      trackVisit(location);
+    }
+  }, [location]);
 
   return (
     <Switch>
@@ -39,6 +50,7 @@ function Router() {
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/reviews" component={AdminReviews} />
       <Route path="/admin/orders" component={AdminOrders} />
+      <Route path="/admin/visitors" component={AdminVisitors} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
