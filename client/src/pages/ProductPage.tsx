@@ -76,10 +76,16 @@ export default function ProductPage() {
   }, []);
 
   useEffect(() => {
-    if (!supabaseGroupId) return;
+    const rawId = params.groupId;
+    if (!rawId?.startsWith("sg-")) return;
+    const id = rawId.replace("sg-", "");
     setSgLoading(true);
-    loadSupabaseGroup(supabaseGroupId).then(g => { setSupabaseGroup(g); setSgLoading(false); });
-  }, [supabaseGroupId]);
+    loadSupabaseGroup(id).then(g => {
+      console.log("Supabase group loaded:", g);
+      setSupabaseGroup(g);
+      setSgLoading(false);
+    });
+  }, [params.groupId]);
 
   const group = isSupabaseGroup ? null : PRODUCT_GROUPS[productId];
   const singleProduct = (!group && !isSupabaseGroup) ? allProducts.find((p:any) => p.id === productId) : null;
