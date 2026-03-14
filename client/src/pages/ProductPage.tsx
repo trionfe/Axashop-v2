@@ -23,7 +23,7 @@ const PRICE_ROWS = [
     color: "text-blue-400",
     border: "border-blue-500/30",
     bg: "bg-blue-500/10",
-    getAmount: (p: any, _fee: number) => `€${p.pricePayPal.toFixed(2)}`,
+    getAmount: (p: any, _fee: number) => `€${(parseFloat(p.pricePayPal) || 0).toFixed(2)}`,
   },
   {
     id: "ltc",
@@ -31,7 +31,7 @@ const PRICE_ROWS = [
     color: "text-orange-400",
     border: "border-orange-500/30",
     bg: "bg-orange-500/10",
-    getAmount: (p: any, _fee: number) => `€${p.pricePayPal.toFixed(2)}`,
+    getAmount: (p: any, _fee: number) => `€${(parseFloat(p.priceLTC) || 0).toFixed(2)}`,
   },
   {
     id: "psc",
