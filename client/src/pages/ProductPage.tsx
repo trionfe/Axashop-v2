@@ -8,6 +8,21 @@ import { translations } from "@/lib/translations";
 import { getProductsAsync, getSettings } from "@/lib/products";
 import { PRODUCT_GROUPS, SOCIAL_IMAGES } from "@/pages/Home";
 
+
+const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
+
+async function loadSupabaseGroup(id: string): Promise<any | null> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Groups?id=eq.${id}&select=*`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows?.[0] || null;
+  } catch { return null; }
+}
+
 const DISCORD_TICKET = "https://discord.com/channels/1476550378987454534/1476973014460530718";
 
 const DiscordIcon = ({ className }: { className?: string }) => (
@@ -53,11 +68,35 @@ export default function ProductPage() {
   useEffect(() => { getProductsAsync().then(setAllProducts); }, []);
 
   const productId = params.groupId;
-  const group = PRODUCT_GROUPS[productId];
-  const singleProduct = !group ? allProducts.find(p => p.id === productId) : null;
-  const variants = group
-    ? allProducts.filter(p => group.ids.includes(p.id))
-    : singleProduct ? [singleProduct] : [];
+  const isSupabaseGroup = productId?.startsWith("sg-");
+  const supabaseGroupId = isSupabaseGroup ? productId.replace("sg-", "") : null;
+
+  const [supabaseGroup, setSupabaseGroup] = useState<any>(null);
+  useEffect(() => {
+    if (supabaseGroupId) {
+      loadSupabaseGroup(supabaseGroupId).then(setSupabaseGroup);
+    }
+  }, [supabaseGroupId]);
+
+  const group = isSupabaseGroup ? null : PRODUCT_GROUPS[productId];
+  const singleProduct = (!group && !isSupabaseGroup) ? allProducts.find(p => p.id === productId) : null;
+
+  // Variants: soit groupe Supabase, soit groupe codé, soit produit simple
+  const variants = isSupabaseGroup && supabaseGroup
+    ? (supabaseGroup.options || []).map((o: any) => ({
+        ...o,
+        id: o.id || `opt-${Math.random()}`,
+        nameKey: o.name,
+        descKey: o.name,
+        pricePayPal: parseFloat(o.pricePayPal) || 0,
+        priceLTC: parseFloat(o.priceLTC) || 0,
+        pricePSC: parseFloat(o.pricePSC) || 0,
+        stock: parseInt(o.stock) || 0,
+        columnId: supabaseGroup.category,
+      }))
+    : group
+      ? allProducts.filter(p => group.ids.includes(p.id))
+      : singleProduct ? [singleProduct] : [];
 
   const [selectedVariantId, setSelectedVariantId] = useState<string>("");
 
@@ -71,16 +110,19 @@ export default function ProductPage() {
   }, [variants.length]);
 
   useEffect(() => {
-    if (!group && !singleProduct && allProducts.length > 0) navigate("/");
-  }, [group, singleProduct, allProducts.length]);
+    if (!group && !singleProduct && !isSupabaseGroup && allProducts.length > 0) navigate("/");
+  }, [group, singleProduct, isSupabaseGroup, allProducts.length]);
 
   const selectedVariant = variants.find(v => v.id === selectedVariantId) ?? variants[0];
+  if (isSupabaseGroup && !supabaseGroup) return <div className="flex items-center justify-center min-h-screen"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   if (!selectedVariant) return null;
 
   const isOut = (selectedVariant.stock ?? 0) === 0;
   const heroImage = SOCIAL_IMAGES[selectedVariant.id] || selectedVariant.image || (group ? group.image : "");
-  const pageTitle = group ? group.label : (t[selectedVariant.nameKey] || selectedVariant.nameKey);
-  const pageCategory = group ? group.category : selectedVariant.columnId;
+  const activeGroupLabel = isSupabaseGroup ? supabaseGroup?.label : group?.label;
+  const activeGroupCategory = isSupabaseGroup ? supabaseGroup?.category : group?.category;
+  const pageTitle = activeGroupLabel || (t[selectedVariant.nameKey] || selectedVariant.nameKey);
+  const pageCategory = activeGroupCategory || selectedVariant.columnId;
   const isSingleStreaming = !group && selectedVariant.columnId === "Social";
 
   const streamingFeatures = [
