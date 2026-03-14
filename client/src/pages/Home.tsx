@@ -128,6 +128,20 @@ export const PRODUCT_GROUPS: Record<string, { label: string; image: string; ids:
   },
 };
 
+
+const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
+
+async function loadSupabaseGroups(): Promise<any[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Groups?select=*&order=id.asc`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) return [];
+    return await res.json() || [];
+  } catch { return []; }
+}
+
 // IDs qui font partie d'un groupe (on les cache de la grille principale)
 const GROUPED_IDS = new Set(Object.values(PRODUCT_GROUPS).flatMap((g) => g.ids));
 
@@ -154,6 +168,7 @@ export default function Home() {
   const [selectedTag, setSelectedTag] = useState("All");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [supabaseGroups, setSupabaseGroups] = useState<any[]>([]);
   const { language } = useLanguage();
   const t = (translations[language as keyof typeof translations] || translations.en) as any;
   const { addToCart } = useCart();
@@ -163,6 +178,7 @@ export default function Home() {
 
   useEffect(() => {
     getProductsAsync().then(p => setProducts(p));
+    loadSupabaseGroups().then(setSupabaseGroups);
   }, []);
 
   const categories = ["All", ...Array.from(new Set(products.map((p: any) => p.columnId.toString())))];
@@ -326,6 +342,38 @@ export default function Home() {
 
             {/* Products Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+              {/* === GROUPES SUPABASE (créés depuis admin) === */}
+              {supabaseGroups
+                .filter(g => selectedTag === "All" || selectedTag === g.category)
+                .filter(g => !searchQuery || g.label.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((g: any) => {
+                  const opts = g.options || [];
+                  const minPrice = opts.length > 0 ? Math.min(...opts.map((o: any) => parseFloat(o.pricePayPal) || 0)) : 0;
+                  const groupImg = opts[0]?.image || g.image;
+                  return (
+                    <motion.div key={`sg-${g.id}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                      className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full cursor-pointer"
+                      onClick={() => navigate(`/product/sg-${g.id}`)}>
+                      <div className="aspect-[4/3] overflow-hidden relative">
+                        {groupImg ? <img src={groupImg} alt={g.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                          : <div className="w-full h-full bg-white/[0.03]" />}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
+                        <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">{g.category}</div>
+                        <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-[10px] font-black text-primary uppercase tracking-tighter">{opts.length} options</div>
+                      </div>
+                      <div className="p-8 flex flex-col flex-1">
+                        <h3 className="text-xl font-bold text-white leading-tight group-hover:text-primary transition-colors mb-2">{g.label}</h3>
+                        <p className="text-sm text-slate-400 mb-8 font-medium">{opts.length} {(t as any).variantsAvailable || "variantes disponibles"} — {(t as any).from || "à partir de"} €{minPrice.toFixed(2)}</p>
+                        <div className="mt-auto pt-6 border-t border-white/[0.05]">
+                          <Button className="w-full h-12 bg-white/[0.05] hover:bg-primary/20 text-white font-black rounded-2xl transition-all border border-white/10 hover:border-primary/40 flex items-center justify-center gap-2">
+                            {(t as any).seeOptions || "Voir les options"}<ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
 
               {/* === CARTES GROUPES (Netflix, Prime, YouTube, ChatGPT) === */}
               {visibleGroups.map(([groupId, group]) => {
