@@ -52,11 +52,11 @@ export default function Header() {
     <header 
       className={`fixed top-0 z-[100] w-full transition-all duration-500 py-4 bg-background border-b border-white/10 shadow-2xl`}
     >
-      <div className="container flex items-center justify-between">
+      <div className="container flex items-center justify-between overflow-visible">
         {/* Logo */}
         <div className="flex items-center gap-12">
           <a href="/" className="group relative">
-            <div className="text-2xl font-black tracking-tighter text-white flex items-center">
+            <div className="text-2xl font-black tracking-tighter text-white flex items-center whitespace-nowrap">
               AXA<span className="text-primary group-hover:text-blue-400 transition-colors">SHOP</span>
               <div className="ml-1 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             </div>
