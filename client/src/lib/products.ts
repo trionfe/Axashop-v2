@@ -74,9 +74,7 @@ async function supabaseLoad(): Promise<any[] | null> {
     const data = rows[0]?.Data;
     // Validate: doit être un tableau de produits avec des vrais prix
     if (!Array.isArray(data) || data.length === 0) return null;
-    const normalized = normalizeProducts(data);
-    if (normalized[0].pricePayPal === 0 && normalized[0].priceLTC === 0) return null;
-    return normalized;
+    return normalizeProducts(data);
   } catch { return null; }
 }
 
