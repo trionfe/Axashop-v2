@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/lib/translations';
-import { convertLTCToEUR } from '@/lib/priceConverter';
 
 interface PaymentMethodSelectorProps {
   selectedMethod: 'paypal' | 'ltc' | 'paysafecard';
@@ -30,24 +29,10 @@ export default function PaymentMethodSelector({
   onPaysafecardPinChange,
 }: PaymentMethodSelectorProps) {
   const [copiedText, setCopiedText] = useState(false);
-  const [ltcPriceEUR, setLtcPriceEUR] = useState<number | null>(null);
   const { language } = useLanguage();
   const t = translations[language as keyof typeof translations] || translations.en;
 
   const pscTotalPrice = pricePSC * (1 + pscFeePercent / 100);
-
-  useEffect(() => {
-    const loadLTCPrice = async () => {
-      try {
-        const eurPrice = await convertLTCToEUR(priceLTC);
-        setLtcPriceEUR(eurPrice);
-      } catch (err) {
-        console.error('Error converting LTC price:', err);
-      }
-    };
-
-    loadLTCPrice();
-  }, [priceLTC]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -105,8 +90,7 @@ export default function PaymentMethodSelector({
                   <p className="text-[10px] text-slate-400">{(t as any).litecoinCrypto || "Crypto-monnaie décentralisée"}</p>
                 </div>
               </div>
-              <p className="text-2xl font-black text-white">{ltcPriceEUR !== null ? `€${ltcPriceEUR.toFixed(2)}` : '€...'}</p>
-              <p className="text-[10px] text-slate-400">≈ {priceLTC.toFixed(8)} LTC</p>
+              <p className="text-2xl font-black text-white">€{priceLTC.toFixed(2)}</p>
             </div>
           </button>
 
