@@ -433,7 +433,11 @@ export default function AdminProducts() {
                   </Field>
                 </div>
                 <Field label="Stock">
-                  <Input type="number" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} className="bg-white/5 border-white/10 h-11" />
+                  <div className="flex gap-2">
+                    <Input type="number" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} className="bg-white/5 border-white/10 h-11 flex-1" />
+                    <button type="button" onClick={() => setForm({ ...form, stock: 999999 })}
+                      className="px-3 h-11 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-lg hover:bg-primary/20 hover:border-primary/40 transition-all">∞</button>
+                  </div>
                 </Field>
                 <Field label="Image">
                   <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, (v) => setForm((p: any) => ({ ...p, image: v })))} />
@@ -544,7 +548,11 @@ export default function AdminProducts() {
                                 </Field>
                               </div>
                               <Field label="Stock">
-                                <Input type="number" value={optionForm.stock} onChange={e => setOptionForm({ ...optionForm, stock: e.target.value })} className="bg-white/5 border-white/10 h-10" />
+                                <div className="flex gap-2">
+                                  <Input type="number" value={optionForm.stock} onChange={e => setOptionForm({ ...optionForm, stock: e.target.value })} className="bg-white/5 border-white/10 h-10 flex-1" />
+                                  <button type="button" onClick={() => setOptionForm({ ...optionForm, stock: 999999 })}
+                                    className="px-3 h-10 rounded-xl bg-white/5 border border-white/10 text-white font-bold hover:bg-primary/20 transition-all">∞</button>
+                                </div>
                               </Field>
                               <Field label="Image">
                                 <input ref={optionImageRef} type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, (v) => setOptionForm((o: any) => ({ ...o, image: v })))} />
