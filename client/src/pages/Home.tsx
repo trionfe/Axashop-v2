@@ -442,7 +442,7 @@ export default function Home() {
                         </div>
                         <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex justify-between items-center">
                           <p className="text-xs font-black text-orange-400 uppercase tracking-tighter">LTC</p>
-                          <p className="text-base font-black text-white whitespace-nowrap">€{product.pricePayPal.toFixed(2)}</p>
+                          <p className="text-base font-black text-white whitespace-nowrap">€{(parseFloat(product.priceLTC)||0).toFixed(2)}</p>
                         </div>
                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 flex justify-between items-center">
                           <p className="text-xs font-black text-green-400 uppercase tracking-tighter">PSC</p>
