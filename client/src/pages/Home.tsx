@@ -162,7 +162,9 @@ export default function Home() {
     loadSupabaseGroups().then(setSupabaseGroups);
   }, []);
 
-  const categories = ["All", ...Array.from(new Set(products.map((p: any) => p.columnId.toString())))];
+  // Normalise les catégories (trim + capitalize) pour éviter les doublons
+  const normalizeCategory = (cat: string) => cat.trim().charAt(0).toUpperCase() + cat.trim().slice(1).toLowerCase().charAt(0).toUpperCase() + cat.trim().slice(1).toLowerCase().slice(1);
+  const categories = ["All", ...Array.from(new Set(products.map((p: any) => normalizeCategory(p.columnId.toString()))))];
 
   // Produits individuels visibles (hors ceux dans un groupe)
   const filteredProducts = products.filter((product: any) => {
@@ -170,13 +172,13 @@ export default function Home() {
     const name = (t as any)[product.nameKey] || product.nameKey;
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTag = selectedTag === "All" || product.columnId === selectedTag;
+    const matchesTag = selectedTag === "All" || normalizeCategory(product.columnId) === selectedTag;
     return matchesSearch && matchesTag;
   });
 
   // Groupes visibles selon filtre
   const visibleGroups = Object.entries(PRODUCT_GROUPS).filter(([, group]) => {
-    if (selectedTag !== "All" && selectedTag !== group.category) return false;
+    if (selectedTag !== "All" && selectedTag !== normalizeCategory(group.category)) return false;
     if (searchQuery) {
       return group.label.toLowerCase().includes(searchQuery.toLowerCase());
     }
@@ -326,7 +328,7 @@ export default function Home() {
 
               {/* === GROUPES SUPABASE (créés depuis admin) === */}
               {supabaseGroups
-                .filter(g => selectedTag === "All" || selectedTag.toLowerCase() === (g.category || "").toLowerCase())
+                .filter(g => selectedTag === "All" || selectedTag.toLowerCase() === normalizeCategory(g.category || "").toLowerCase())
                 .filter(g => !searchQuery || (g.label || "").toLowerCase().includes(searchQuery.toLowerCase()))
                 .map((g: any) => {
                   const opts = g.options || [];
@@ -420,7 +422,7 @@ export default function Home() {
                     </div>
                     <div className="absolute top-4 right-4 px-4 py-1.5 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-xs font-bold text-white uppercase tracking-tight flex items-center gap-2 shadow-lg shadow-black/20">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                      {product.stock || 0} {(t as any).inStock || "in stock"}
+                      {(product.stock || 0) >= 9999 ? "∞" : (product.stock || 0)} {(t as any).inStock || "in stock"}
                     </div>
                   </div>
                   <div className="p-8 flex flex-col flex-1">
