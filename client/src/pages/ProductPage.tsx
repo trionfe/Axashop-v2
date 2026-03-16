@@ -81,7 +81,6 @@ export default function ProductPage() {
     const id = rawId.replace("sg-", "");
     setSgLoading(true);
     loadSupabaseGroup(id).then(g => {
-      console.log("Supabase group loaded:", g);
       setSupabaseGroup(g);
       setSgLoading(false);
     });
@@ -122,7 +121,6 @@ export default function ProductPage() {
   }, [isSupabaseGroup, group, singleProduct, allProducts.length]);
 
   const selectedVariant = variants.find(v => v.id === selectedVariantId) ?? variants[0];
-  console.log("selectedVariant prices:", selectedVariant?.pricePayPal, selectedVariant?.priceLTC, selectedVariant?.pricePSC);
   if (isSupabaseGroup && sgLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   if (!selectedVariant) return null;
 
@@ -162,7 +160,7 @@ export default function ProductPage() {
           <h1 className="text-3xl font-black tracking-tighter leading-tight">{pageTitle}</h1>
           <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-bold ${isOut ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400"}`}>
             <div className={`w-2 h-2 rounded-full ${isOut ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
-            {isOut ? (t.outOfStock || "Out of Stock") : `${selectedVariant.stock} ${t.inStock || "in stock"}`}
+            {isOut ? (t.outOfStock || "Out of Stock") : `${(selectedVariant.stock ?? 0) >= 9999 ? "∞" : selectedVariant.stock} ${t.inStock || "in stock"}`}
           </div>
         </div>
 
@@ -228,7 +226,7 @@ export default function ProductPage() {
               <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">{pageTitle}</h1>
               <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-bold ${isOut ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400"}`}>
                 <div className={`w-2 h-2 rounded-full ${isOut ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
-                {isOut ? (t.outOfStock || "Out of Stock") : `${selectedVariant.stock} ${t.inStock || "in stock"}`}
+                {isOut ? (t.outOfStock || "Out of Stock") : `${(selectedVariant.stock ?? 0) >= 9999 ? "∞" : selectedVariant.stock} ${t.inStock || "in stock"}`}
               </div>
             </div>
 
