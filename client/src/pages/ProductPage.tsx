@@ -121,7 +121,6 @@ export default function ProductPage() {
   }, [isSupabaseGroup, group, singleProduct, allProducts.length]);
 
   const selectedVariant = variants.find(v => v.id === selectedVariantId) ?? variants[0];
-  console.log("VARIANT DEBUG:", JSON.stringify(selectedVariant));
   if (isSupabaseGroup && sgLoading) return <div className="flex items-center justify-center min-h-screen"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   if (!selectedVariant) return null;
 
@@ -263,7 +262,7 @@ export default function ProductPage() {
             </div>
 
             {/* ── VARIANTES ── */}
-            {(group || isSupabaseGroup) && variants.length > 1 && (
+            {group && variants.length > 1 && (
               <div className="space-y-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.variant || "Variante"}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
