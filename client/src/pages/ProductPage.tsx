@@ -263,7 +263,7 @@ export default function ProductPage() {
             </div>
 
             {/* ── VARIANTES ── */}
-            {group && variants.length > 1 && (
+            {(group || isSupabaseGroup) && variants.length > 1 && (
               <div className="space-y-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t.variant || "Variante"}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
