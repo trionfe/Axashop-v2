@@ -90,8 +90,7 @@ export default function Header() {
 
         {/* Right Side */}
         <div className="flex items-center gap-6">
-          {/* Cart Widget */}
-          <CartWidget />
+
 
           {/* Language Selector */}
           <div className="hidden md:block relative group">
