@@ -364,7 +364,7 @@ export default function Home() {
               {visibleGroups.map(([groupId, group]) => {
                 const groupProducts = products.filter(p => group.ids.includes(p.id));
                 const minPrice = groupProducts.length > 0 ? Math.min(...groupProducts.map(p => p.pricePayPal)) : 0;
-                const groupImg = groupProducts[0]?.image || group.image;
+                const groupImg = groupProducts[0]?.image || group?.image || "";
 
                 return (
                   <motion.div
