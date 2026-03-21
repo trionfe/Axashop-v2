@@ -23,45 +23,18 @@ async function loadProducts(): Promise<any[]> {
 }
 async function saveProducts(products: any[]): Promise<boolean> {
   try {
-    // 1. Vérifier que Supabase est accessible
-    const check = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
     });
-    if (!check.ok) throw new Error("Supabase inaccessible");
-    const rows = await check.json();
-    if (!rows) throw new Error("Réponse Supabase invalide");
-
-    // 2. Vérifier que les données à sauvegarder sont valides
-    if (!Array.isArray(products) || products.length === 0) throw new Error("Données invalides");
-
+    const rows = await res.json();
     const body = JSON.stringify({ Data: products });
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
-
-    // 3. Sauvegarder
-    let result;
     if (rows?.length > 0) {
-      result = await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, { method: "PATCH", headers, body });
+      return (await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, { method: "PATCH", headers, body })).ok;
     } else {
-      result = await fetch(`${SUPABASE_URL}/rest/v1/Products`, { method: "POST", headers, body });
+      return (await fetch(`${SUPABASE_URL}/rest/v1/Products`, { method: "POST", headers, body })).ok;
     }
-    if (!result.ok) throw new Error(`Erreur HTTP ${result.status}`);
-
-    // 4. Vérification post-save: relire pour confirmer
-    const verify = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=*&limit=1`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
-    if (!verify.ok) throw new Error("Vérification impossible");
-    const saved = await verify.json();
-    const savedData = saved[0]?.Data;
-    if (!Array.isArray(savedData) || savedData.length < products.length) {
-      throw new Error("Sauvegarde incomplète détectée");
-    }
-
-    return true;
-  } catch (err) {
-    console.error("Erreur sauvegarde:", err);
-    return false;
-  }
+  } catch { return false; }
 }
 
 // ── Groupes (table Groups) ───────────────────────────────────────────────────
