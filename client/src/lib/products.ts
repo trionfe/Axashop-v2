@@ -107,8 +107,7 @@ async function supabaseSave(products: any[]): Promise<boolean> {
 export async function getProductsAsync(): Promise<any[]> {
   const fromSupabase = await supabaseLoad();
   if (fromSupabase) return fromSupabase;
-  // Supabase vide → insérer les produits par défaut
-  await supabaseSave(DEFAULT_PRODUCTS);
+  // Supabase vide → retourner les DEFAULT_PRODUCTS sans écraser Supabase
   return DEFAULT_PRODUCTS;
 }
 
