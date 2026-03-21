@@ -21,13 +21,41 @@ async function loadProducts(): Promise<any[]> {
     return rows[0]?.Data || [];
   } catch { return []; }
 }
+
+// Compresse les images base64 avant sauvegarde pour éviter les erreurs de taille
+async function compressImage(base64: string, maxWidth = 400): Promise<string> {
+  if (!base64 || !base64.startsWith("data:image")) return base64;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ratio = Math.min(1, maxWidth / img.width);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = () => resolve(base64);
+    img.src = base64;
+  });
+}
+
+async function compressAllImages(products: any[]): Promise<any[]> {
+  return Promise.all(products.map(async p => ({
+    ...p,
+    image: p.image ? await compressImage(p.image) : p.image
+  })));
+}
+
 async function saveProducts(products: any[]): Promise<boolean> {
   try {
+    const compressed = await compressAllImages(products);
     const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
     });
     const rows = await res.json();
-    const body = JSON.stringify({ Data: products });
+    const body = JSON.stringify({ Data: compressed });
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
     if (rows?.length > 0) {
       return (await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, { method: "PATCH", headers, body })).ok;
