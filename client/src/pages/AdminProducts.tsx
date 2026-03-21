@@ -23,18 +23,45 @@ async function loadProducts(): Promise<any[]> {
 }
 async function saveProducts(products: any[]): Promise<boolean> {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
+    // 1. Vérifier que Supabase est accessible
+    const check = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
     });
-    const rows = await res.json();
+    if (!check.ok) throw new Error("Supabase inaccessible");
+    const rows = await check.json();
+    if (!rows) throw new Error("Réponse Supabase invalide");
+
+    // 2. Vérifier que les données à sauvegarder sont valides
+    if (!Array.isArray(products) || products.length === 0) throw new Error("Données invalides");
+
     const body = JSON.stringify({ Data: products });
     const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+
+    // 3. Sauvegarder
+    let result;
     if (rows?.length > 0) {
-      return (await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, { method: "PATCH", headers, body })).ok;
+      result = await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, { method: "PATCH", headers, body });
     } else {
-      return (await fetch(`${SUPABASE_URL}/rest/v1/Products`, { method: "POST", headers, body })).ok;
+      result = await fetch(`${SUPABASE_URL}/rest/v1/Products`, { method: "POST", headers, body });
     }
-  } catch { return false; }
+    if (!result.ok) throw new Error(`Erreur HTTP ${result.status}`);
+
+    // 4. Vérification post-save: relire pour confirmer
+    const verify = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=*&limit=1`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!verify.ok) throw new Error("Vérification impossible");
+    const saved = await verify.json();
+    const savedData = saved[0]?.Data;
+    if (!Array.isArray(savedData) || savedData.length < products.length) {
+      throw new Error("Sauvegarde incomplète détectée");
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Erreur sauvegarde:", err);
+    return false;
+  }
 }
 
 // ── Groupes (table Groups) ───────────────────────────────────────────────────
@@ -264,7 +291,24 @@ export default function AdminProducts() {
           </button>
         </div>
 
-
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="glass-card p-6 rounded-3xl border-primary/30 bg-primary/5">
+              <h2 className="text-xl font-black text-white mb-4">Paramètres Globaux</h2>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Frais Paysafecard (%)</label>
+                <Input type="number" min="0" max="100" step="0.1" value={settings.pscFeePercent}
+                  onChange={e => setSettingsLocal({ ...settings, pscFeePercent: parseFloat(e.target.value) })}
+                  className="bg-white/5 border-white/10 max-w-xs" />
+              </div>
+              <div className="flex gap-2 justify-end mt-4">
+                <Button variant="ghost" onClick={() => setShowSettings(false)} className="text-slate-400">Annuler</Button>
+                <Button onClick={() => { saveSettings(settings); setShowSettings(false); toast.success("Paramètres mis à jour"); }} className="bg-primary text-white">Enregistrer</Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="relative max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
