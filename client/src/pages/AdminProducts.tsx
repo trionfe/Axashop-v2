@@ -253,6 +253,56 @@ export default function AdminProducts() {
     (g.category || "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleExportBackup = async () => {
+    const currentProducts = await loadProducts();
+    const currentGroups = await loadGroups();
+    const backup = {
+      version: 1,
+      date: new Date().toISOString(),
+      products: currentProducts,
+      groups: currentGroups,
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `axashop-backup-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Backup téléchargé ✅");
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!window.confirm("Restaurer depuis ce backup ? Cela écrasera les données actuelles.")) return;
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      if (!backup.products || !Array.isArray(backup.products)) throw new Error("Fichier invalide");
+      setSaving(true);
+      const ok = await saveProducts(backup.products);
+      if (ok && backup.groups) {
+        for (const g of backup.groups) {
+          await saveGroup(g);
+        }
+      }
+      setSaving(false);
+      if (ok) {
+        setProducts(backup.products);
+        const g = await loadGroups();
+        setGroups(g);
+        toast.success("Backup restauré ✅");
+      } else {
+        toast.error("Erreur lors de la restauration ❌");
+      }
+    } catch (err) {
+      setSaving(false);
+      toast.error("Fichier backup invalide ❌");
+    }
+    e.target.value = "";
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8 py-6">
@@ -261,7 +311,15 @@ export default function AdminProducts() {
             <h1 className="text-4xl font-black tracking-tighter">Gestion des <span className="text-primary">Produits</span></h1>
             <p className="text-slate-400 font-medium">Sauvegardé en base — visible partout.</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            <Button onClick={handleExportBackup} variant="outline"
+              className="h-12 px-5 border-green-500/30 text-green-400 hover:bg-green-500/10 font-bold rounded-xl">
+              ⬇ Backup
+            </Button>
+            <label className="h-12 px-5 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 font-bold rounded-xl flex items-center cursor-pointer">
+              ⬆ Restaurer
+              <input type="file" accept=".json" className="hidden" onChange={handleImportBackup} />
+            </label>
             <Button onClick={() => setShowSettings(!showSettings)} variant="outline"
               className="h-12 px-5 border-white/10 text-white hover:bg-white/5 font-bold rounded-xl">
               <Settings className="w-4 h-4 mr-2" />Paramètres
