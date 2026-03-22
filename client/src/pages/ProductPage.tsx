@@ -168,7 +168,7 @@ export default function ProductPage() {
 
           {/* ── LEFT ── */}
           <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="lg:sticky lg:top-24 space-y-4">
-            <div className="aspect-[16/10] rounded-[2rem] overflow-hidden bg-white/[0.02] border border-white/[0.06] relative">
+            <div className="aspect-[16/9] rounded-[2rem] overflow-hidden bg-white/[0.02] border border-white/[0.06] relative">
               <img src={heroImage} alt={pageTitle} className="w-full h-full object-cover" />
               <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-widest">
                 {pageCategory}
@@ -272,7 +272,7 @@ export default function ProductPage() {
                     return (
                       <button key={v.id} onClick={() => setSelectedVariantId(v.id)}
                         className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-200 text-left group ${isSelected ? "border-primary shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)]" : "border-white/[0.08] hover:border-white/20"}`}>
-                        <div className="aspect-[4/3] overflow-hidden relative">
+                        <div className="aspect-[16/9] overflow-hidden relative">
                           <img src={SOCIAL_IMAGES[v.id] || v.image || group?.image || supabaseGroup?.image || ""} alt={isSupabaseGroup ? v.nameKey : (t[v.nameKey] || v.nameKey)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                           <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent" />
                         </div>
