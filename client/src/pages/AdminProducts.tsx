@@ -23,7 +23,7 @@ async function loadProducts(): Promise<any[]> {
 }
 
 // Compresse les images base64 avant sauvegarde pour éviter les erreurs de taille
-async function compressImage(base64: string, maxWidth = 400): Promise<string> {
+async function compressImage(base64: string, maxWidth = 1200): Promise<string> {
   if (!base64 || !base64.startsWith("data:image")) return base64;
   return new Promise((resolve) => {
     const img = new Image();
@@ -34,7 +34,7 @@ async function compressImage(base64: string, maxWidth = 400): Promise<string> {
       canvas.height = img.height * ratio;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", 0.7));
+      resolve(canvas.toDataURL("image/webp", 0.92));
     };
     img.onerror = () => resolve(base64);
     img.src = base64;
