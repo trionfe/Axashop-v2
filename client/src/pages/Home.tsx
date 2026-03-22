@@ -338,7 +338,7 @@ export default function Home() {
                     <motion.div key={`sg-${g.id}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                       className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full cursor-pointer"
                       onClick={() => navigate(`/product/sg-${g.id}`)}>
-                      <div className="aspect-[4/3] overflow-hidden relative">
+                      <div className="aspect-[16/9] overflow-hidden relative">
                         {groupImg
                           ? <img src={groupImg} alt={g.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                           : <div className="w-full h-full bg-white/[0.03]" />}
@@ -374,7 +374,7 @@ export default function Home() {
                     className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full cursor-pointer"
                     onClick={() => navigate(`/product/${groupId}`)}
                   >
-                    <div className="aspect-[4/3] overflow-hidden relative">
+                    <div className="aspect-[16/9] overflow-hidden relative">
                       <img src={groupImg} alt={group.label} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#030711] via-transparent to-transparent opacity-60" />
                       <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-[#030711]/80 backdrop-blur-md border border-white/10 text-[10px] font-black text-white uppercase tracking-tighter">
@@ -410,7 +410,7 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full"
                 >
-                  <div className="aspect-[4/3] overflow-hidden relative">
+                  <div className="aspect-[16/9] overflow-hidden relative">
                     <img
                       src={product.image}
                       alt={(t as any)[product.nameKey] || product.nameKey}
