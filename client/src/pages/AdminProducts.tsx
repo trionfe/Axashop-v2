@@ -255,22 +255,20 @@ export default function AdminProducts() {
 
 
   const handleTranslate = async () => {
-    if (!window.confirm("Traduire automatiquement tous les produits dans toutes les langues ? Cela peut prendre 30-60 secondes.")) return;
-    
+    if (!window.confirm("Traduire automatiquement tous les produits dans toutes les langues ?")) return;
+
     const currentProducts = await loadProducts();
-    const names = currentProducts.map((p: any) => ({
-      id: p.id,
-      name: p.nameKey,
-      desc: p.descKey || ""
-    }));
+    // Get unique product names that need translation (not nameKey-based ones)
+    const toTranslate = currentProducts
+      .filter((p: any) => p.nameKey && !p.nameKey.startsWith("prod_"))
+      .map((p: any) => ({ id: p.id, name: p.nameKey, desc: p.descKey || "" }));
 
-    const LANGS = ["fr", "es", "de", "it", "pt", "nl", "tr", "ru", "ar"];
-    const langNames: Record<string, string> = {
-      fr: "French", es: "Spanish", de: "German", it: "Italian",
-      pt: "Portuguese", nl: "Dutch", tr: "Turkish", ru: "Russian", ar: "Arabic"
-    };
+    if (toTranslate.length === 0) {
+      toast.info("Aucun produit personnalisé à traduire.");
+      return;
+    }
 
-    toast.info("Traduction en cours...");
+    toast.info(`Traduction de ${toTranslate.length} produits...`);
 
     try {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -281,34 +279,26 @@ export default function AdminProducts() {
           max_tokens: 4000,
           messages: [{
             role: "user",
-            content: `Translate these product names and descriptions into ${LANGS.map(l => langNames[l]).join(", ")}. 
-Return ONLY a JSON object like: {"fr": {"prod_id_name": "...", "prod_id_desc": "..."}, "es": {...}}
-Keep names short. If desc is empty string, keep it empty.
-Products: ${JSON.stringify(names.slice(0, 30))}`
+            content: `Translate these product names into French, Spanish, German, Italian, Portuguese, Dutch, Turkish, Russian, Arabic. Return ONLY valid JSON: {"fr":{"id":"translation",...},"es":{...},...}. Products: ${JSON.stringify(toTranslate.map((p:any) => ({id: p.id, name: p.name})))}`
           }]
         })
       });
 
+      if (!response.ok) throw new Error(`API error ${response.status}`);
       const data = await response.json();
       const text = data.content?.[0]?.text || "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON in response");
-      
+      if (!jsonMatch) throw new Error("No JSON returned");
+
       const translations = JSON.parse(jsonMatch[0]);
-      
-      // Save translations to localStorage for the app to use
       const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
-      LANGS.forEach(lang => {
-        if (translations[lang]) {
-          existing[lang] = { ...(existing[lang] || {}), ...translations[lang] };
-        }
+      Object.keys(translations).forEach(lang => {
+        existing[lang] = { ...(existing[lang] || {}), ...translations[lang] };
       });
       localStorage.setItem("custom_translations", JSON.stringify(existing));
-      
-      toast.success("✅ Traductions enregistrées ! Rechargez la page pour voir les changements.");
-    } catch (err) {
-      toast.error("Erreur de traduction. Réessayez.");
-      console.error(err);
+      toast.success(`✅ ${toTranslate.length} produits traduits en ${Object.keys(translations).length} langues !`);
+    } catch (err: any) {
+      toast.error("Erreur traduction : " + (err.message || "inconnue"));
     }
   };
 
