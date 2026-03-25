@@ -253,6 +253,65 @@ export default function AdminProducts() {
     (g.category || "").toLowerCase().includes(search.toLowerCase())
   );
 
+
+  const handleTranslate = async () => {
+    if (!window.confirm("Traduire automatiquement tous les produits dans toutes les langues ? Cela peut prendre 30-60 secondes.")) return;
+    
+    const currentProducts = await loadProducts();
+    const names = currentProducts.map((p: any) => ({
+      id: p.id,
+      name: p.nameKey,
+      desc: p.descKey || ""
+    }));
+
+    const LANGS = ["fr", "es", "de", "it", "pt", "nl", "tr", "ru", "ar"];
+    const langNames: Record<string, string> = {
+      fr: "French", es: "Spanish", de: "German", it: "Italian",
+      pt: "Portuguese", nl: "Dutch", tr: "Turkish", ru: "Russian", ar: "Arabic"
+    };
+
+    toast.info("Traduction en cours...");
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4000,
+          messages: [{
+            role: "user",
+            content: `Translate these product names and descriptions into ${LANGS.map(l => langNames[l]).join(", ")}. 
+Return ONLY a JSON object like: {"fr": {"prod_id_name": "...", "prod_id_desc": "..."}, "es": {...}}
+Keep names short. If desc is empty string, keep it empty.
+Products: ${JSON.stringify(names.slice(0, 30))}`
+          }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content?.[0]?.text || "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON in response");
+      
+      const translations = JSON.parse(jsonMatch[0]);
+      
+      // Save translations to localStorage for the app to use
+      const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
+      LANGS.forEach(lang => {
+        if (translations[lang]) {
+          existing[lang] = { ...(existing[lang] || {}), ...translations[lang] };
+        }
+      });
+      localStorage.setItem("custom_translations", JSON.stringify(existing));
+      
+      toast.success("✅ Traductions enregistrées ! Rechargez la page pour voir les changements.");
+    } catch (err) {
+      toast.error("Erreur de traduction. Réessayez.");
+      console.error(err);
+    }
+  };
+
   const handleExportBackup = async () => {
     const currentProducts = await loadProducts();
     const currentGroups = await loadGroups();
@@ -312,6 +371,10 @@ export default function AdminProducts() {
             <p className="text-slate-400 font-medium">Sauvegardé en base — visible partout.</p>
           </div>
           <div className="flex gap-3 flex-wrap">
+            <Button onClick={handleTranslate} variant="outline"
+              className="h-12 px-5 border-purple-500/30 text-purple-400 hover:bg-purple-500/10 font-bold rounded-xl">
+              🌐 Traduire
+            </Button>
             <Button onClick={handleExportBackup} variant="outline"
               className="h-12 px-5 border-green-500/30 text-green-400 hover:bg-green-500/10 font-bold rounded-xl">
               ⬇ Backup
