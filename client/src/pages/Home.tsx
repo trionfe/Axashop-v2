@@ -165,7 +165,7 @@ export default function Home() {
 
   // Normalise les catégories (trim + capitalize) pour éviter les doublons
   const normalizeCategory = (cat: string) => cat.trim().charAt(0).toUpperCase() + cat.trim().slice(1).toLowerCase().charAt(0).toUpperCase() + cat.trim().slice(1).toLowerCase().slice(1);
-  const categories = ["All", ...Array.from(new Set(products.map((p: any) => normalizeCategory(p.columnId.toString())))).values()].filter(cat => cat.toLowerCase() !== "accounts" && cat.toLowerCase() !== "gaming");
+  const categories = [...Array.from(new Set(products.map((p: any) => normalizeCategory(p.columnId.toString())))).values()].filter(cat => cat.toLowerCase() !== "accounts" && cat.toLowerCase() !== "gaming");
 
   // Produits individuels visibles (hors ceux dans un groupe)
   const filteredProducts = products.filter((product: any) => {
@@ -591,7 +591,7 @@ export default function Home() {
               <iframe
                 src="/exchange.html"
                 className="w-full rounded-2xl border-0"
-                style={{height: '520px'}}
+                style={{height: '520px', colorScheme: 'dark'}}
                 title="Exchange AxAShop"
               />
             </div>
