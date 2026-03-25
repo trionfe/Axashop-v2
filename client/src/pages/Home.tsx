@@ -226,6 +226,7 @@ export default function Home() {
   const totalVisible = filteredProducts.length + visibleGroups.length;
 
   return (
+    <>
     <div className="w-full bg-[#030711] overflow-x-hidden relative">
       {/* Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -614,5 +615,6 @@ export default function Home() {
         <span className="text-lg">💸</span>
         Exchange
       </button>
+    </>
   );
 }
