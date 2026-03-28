@@ -95,7 +95,8 @@ export default function Header() {
           {/* Language Selector */}
           <div className="hidden md:block relative group">
             <button className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl text-[11px] font-black text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all">
-              {language.toUpperCase()}
+              <span className="text-base leading-none">{{ fr: "🇫🇷", en: "🇬🇧", es: "🇪🇸", de: "🇩🇪", it: "🇮🇹", pt: "🇵🇹", nl: "🇳🇱", tr: "🇹🇷", ru: "🇷🇺", ar: "🇸🇦" }[language as string] || "🌐"}</span>
+              <span>{language.toUpperCase()}</span>
               <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
             <div className="absolute right-0 top-full mt-2 w-32 bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
