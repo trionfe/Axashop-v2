@@ -119,6 +119,8 @@ export default function AdminProducts() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
   const [settings, setSettingsLocal] = useState(getSettings());
 
   // Modal produit simple
@@ -136,6 +138,13 @@ export default function AdminProducts() {
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
 
   useEffect(() => {
+    // Load maintenance state
+    fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=value&limit=1`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    }).then(r => r.json()).then(rows => {
+      setMaintenanceMode(rows?.[0]?.value === "true");
+    }).catch(() => {});
+
     Promise.all([loadProducts(), loadGroups()]).then(([p, g]) => {
       setProducts(p);
       setGroups(g);
@@ -254,7 +263,136 @@ export default function AdminProducts() {
   );
 
 
-  const handleTranslate = async () => {
+  const toggleMaintenance = async () => {
+    const newState = !maintenanceMode;
+    const label = newState ? "ACTIVER" : "DÉSACTIVER";
+    if (!window.confirm(`${label} le mode maintenance ? ${newState ? "Les visiteurs verront la page de maintenance." : "Le site sera accessible à tous."}`)) return;
+
+    setMaintenanceLoading(true);
+    try {
+      // Check if Settings table exists and has the row
+      const check = await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=id&limit=1`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+      });
+      const rows = await check.json();
+      const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+
+      if (rows?.length > 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance`, {
+          method: "PATCH", headers,
+          body: JSON.stringify({ value: newState ? "true" : "false" })
+        });
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/Settings`, {
+          method: "POST", headers,
+          body: JSON.stringify({ key: "maintenance", value: newState ? "true" : "false" })
+        });
+      }
+      setMaintenanceMode(newState);
+      toast.success(newState ? "🔧 Mode maintenance activé" : "✅ Site remis en ligne");
+    } catch {
+      toast.error("Erreur lors du changement de mode");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+    const handleTranslate = async () => {
+    if (!window.confirm("Traduire tous les produits personnalisés dans toutes les langues ?")) return;
+
+    const currentProducts = await loadProducts();
+    const toTranslate = currentProducts
+      .filter((p: any) => p.nameKey && !p.nameKey.startsWith("prod_"))
+      .map((p: any) => ({ id: p.id, name: p.nameKey }));
+
+    if (toTranslate.length === 0) {
+      toast.info("Aucun produit personnalisé à traduire.");
+      return;
+    }
+
+    setSaving(true);
+    toast.info(`Traduction de ${toTranslate.length} produits...`);
+
+    const LANGS = [
+      { code: "fr", deepl: "FR" },
+      { code: "es", deepl: "ES" },
+      { code: "de", deepl: "DE" },
+      { code: "it", deepl: "IT" },
+      { code: "pt", deepl: "PT-PT" },
+      { code: "nl", deepl: "NL" },
+      { code: "tr", deepl: "TR" },
+      { code: "ru", deepl: "RU" },
+    ];
+
+    try {
+      const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
+      let translated = 0;
+
+      for (const lang of LANGS) {
+        const translations: Record<string, string> = {};
+        for (const product of toTranslate) {
+          try {
+            const res = await fetch(
+              `https://api.mymemory.translated.net/get?q=${encodeURIComponent(product.name)}&langpair=fr|${lang.deepl.split("-")[0].toLowerCase()}`
+            );
+            const data = await res.json();
+            const translation = data?.responseData?.translatedText;
+            if (translation && translation !== product.name) {
+              translations[product.id] = translation;
+            }
+          } catch { /* skip */ }
+        }
+        if (!existing[lang.code]) existing[lang.code] = {};
+        Object.assign(existing[lang.code], translations);
+        translated++;
+        toast.info(`Progression: ${translated}/${LANGS.length} langues...`);
+      }
+
+      // Arabic separately (not in mymemory reliably, keep original)
+      localStorage.setItem("custom_translations", JSON.stringify(existing));
+      toast.success(`✅ ${toTranslate.length} produits traduits en ${LANGS.length} langues !`);
+    } catch (err: any) {
+      toast.error("Erreur traduction : " + (err?.message || "inconnue"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+    const toggleMaintenance = async () => {
+    const newState = !maintenanceMode;
+    const label = newState ? "ACTIVER" : "DÉSACTIVER";
+    if (!window.confirm(`${label} le mode maintenance ? ${newState ? "Les visiteurs verront la page de maintenance." : "Le site sera accessible à tous."}`)) return;
+
+    setMaintenanceLoading(true);
+    try {
+      // Check if Settings table exists and has the row
+      const check = await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=id&limit=1`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+      });
+      const rows = await check.json();
+      const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+
+      if (rows?.length > 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance`, {
+          method: "PATCH", headers,
+          body: JSON.stringify({ value: newState ? "true" : "false" })
+        });
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/Settings`, {
+          method: "POST", headers,
+          body: JSON.stringify({ key: "maintenance", value: newState ? "true" : "false" })
+        });
+      }
+      setMaintenanceMode(newState);
+      toast.success(newState ? "🔧 Mode maintenance activé" : "✅ Site remis en ligne");
+    } catch {
+      toast.error("Erreur lors du changement de mode");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+    const handleTranslate = async () => {
     if (!window.confirm("Traduire tous les produits personnalisés dans toutes les langues ?")) return;
 
     const currentProducts = await loadProducts();
@@ -354,6 +492,10 @@ export default function AdminProducts() {
             <p className="text-slate-400 font-medium">Sauvegardé en base — visible partout.</p>
           </div>
           <div className="flex gap-3 flex-wrap">
+            <Button onClick={toggleMaintenance} disabled={maintenanceLoading} variant="outline"
+              className={`h-12 px-5 font-bold rounded-xl border transition-all ${maintenanceMode ? "border-red-500/40 text-red-400 hover:bg-red-500/10 bg-red-500/5" : "border-slate-500/30 text-slate-400 hover:bg-slate-500/10"}`}>
+              {maintenanceLoading ? "..." : maintenanceMode ? "🔧 Maintenance ON" : "🔧 Maintenance OFF"}
+            </Button>
             <Button onClick={handleTranslate} variant="outline"
               className="h-12 px-5 border-purple-500/30 text-purple-400 hover:bg-purple-500/10 font-bold rounded-xl">
               🌐 Traduire
