@@ -79,3 +79,44 @@ app.use("/api/trpc", createExpressMiddleware({
 }));
 
 export default app;
+
+// Translate products via Anthropic (server-side, no CORS issues)
+app.post("/api/translate", async (req: any, res: any) => {
+  try {
+    const { products } = req.body;
+    if (!products || !Array.isArray(products)) {
+      return res.status(400).json({ error: "Invalid products array" });
+    }
+
+    const response = await axios.post(
+      "https://api.anthropic.com/v1/messages",
+      {
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4000,
+        messages: [{
+          role: "user",
+          content: `Translate these product names into French (fr), Spanish (es), German (de), Italian (it), Portuguese (pt), Dutch (nl), Turkish (tr), Russian (ru), Arabic (ar).
+Return ONLY valid JSON without any markdown:
+{"fr":{"PRODUCT_ID":"translated name"},"es":{...},...}
+Products: ${JSON.stringify(products)}`
+        }]
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01"
+        }
+      }
+    );
+
+    const text = response.data.content?.[0]?.text || "";
+    const match = text.replace(/```json|```/g, "").trim().match(/\{[\s\S]*\}/);
+    if (!match) return res.status(500).json({ error: "No JSON in response" });
+
+    res.json({ translations: JSON.parse(match[0]) });
+  } catch (err: any) {
+    console.error("Translate error:", err.message);
+    res.status(500).json({ error: err.message || "Translation failed" });
+  }
+});
