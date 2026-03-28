@@ -255,7 +255,7 @@ export default function AdminProducts() {
 
 
   const handleTranslate = async () => {
-    if (!window.confirm("Traduire automatiquement tous les produits dans toutes les langues ?")) return;
+    if (!window.confirm("Traduire tous les produits personnalisés dans toutes les langues ?")) return;
 
     const currentProducts = await loadProducts();
     const toTranslate = currentProducts
@@ -267,51 +267,31 @@ export default function AdminProducts() {
       return;
     }
 
-    toast.info(`Traduction de ${toTranslate.length} produits en cours...`);
+    setSaving(true);
+    toast.info(`Traduction de ${toTranslate.length} produits...`);
 
     try {
-      // Build prompt
-      const prompt = `Tu es un traducteur. Traduis ces noms de produits en français, espagnol, allemand, italien, portugais, néerlandais, turc, russe et arabe.
-Retourne UNIQUEMENT du JSON valide, sans markdown, sans explication:
-{"fr":{"ID":"traduction"},"es":{...},"de":{...},"it":{...},"pt":{...},"nl":{...},"tr":{...},"ru":{...},"ar":{...}}
-
-Produits: ${JSON.stringify(toTranslate)}`;
-
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4000,
-          messages: [{ role: "user", content: prompt }]
-        })
+        body: JSON.stringify({ products: toTranslate })
       });
 
-      if (!response.ok) {
-        // Fallback: use simple copy in French (just use original name)
-        toast.error("API inaccessible — les noms sont gardés en français par défaut.");
-        return;
-      }
+      if (!res.ok) throw new Error(`Erreur serveur ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
 
-      const data = await response.json();
-      const text = data.content?.[0]?.text || "";
-      const clean = text.replace(/```json|```/g, "").trim();
-      const jsonMatch = clean.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("JSON invalide");
-
-      const translations = JSON.parse(jsonMatch[0]);
+      const translations = data.translations;
       const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
       Object.keys(translations).forEach(lang => {
-        if (!existing[lang]) existing[lang] = {};
-        Object.entries(translations[lang]).forEach(([id, name]) => {
-          existing[lang][id] = name;
-        });
+        existing[lang] = { ...(existing[lang] || {}), ...translations[lang] };
       });
       localStorage.setItem("custom_translations", JSON.stringify(existing));
-      const langCount = Object.keys(translations).length;
-      toast.success(`✅ ${toTranslate.length} produits traduits en ${langCount} langues !`);
+      toast.success(`✅ ${toTranslate.length} produits traduits en ${Object.keys(translations).length} langues !`);
     } catch (err: any) {
       toast.error("Erreur traduction : " + (err?.message || "inconnue"));
+    } finally {
+      setSaving(false);
     }
   };
 
