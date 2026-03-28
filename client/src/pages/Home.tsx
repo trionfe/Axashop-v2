@@ -410,7 +410,8 @@ export default function Home() {
                   key={product.id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full"
+                  className="group bg-white/[0.02] border border-white/[0.05] rounded-[2rem] overflow-hidden hover:border-primary/30 transition-all duration-500 flex flex-col h-full cursor-pointer"
+                  onClick={() => navigate(`/product/${product.id}`)}
                 >
                   <div className="aspect-[16/9] overflow-hidden relative">
                     <img
@@ -433,31 +434,18 @@ export default function Home() {
                         {(t as any)[product.nameKey] || product.nameKey}
                       </h3>
                     </div>
-                    <p className="text-sm text-slate-400 leading-relaxed mb-8 line-clamp-2 font-medium">
+                    <p className="text-sm text-slate-400 leading-relaxed mb-4 line-clamp-2 font-medium">
                       {(t as any)[product.descKey] || product.descKey}
                     </p>
-                    <div className="mt-auto pt-6 border-t border-white/[0.05] space-y-4">
-                      <div className="flex flex-col gap-2">
-                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex justify-between items-center">
-                          <p className="text-xs font-black text-blue-400 uppercase tracking-tighter">PayPal</p>
-                          <p className="text-base font-black text-white whitespace-nowrap">€{product.pricePayPal.toFixed(2)}</p>
+                    <div className="mt-auto pt-6 border-t border-white/[0.05]">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-slate-500 mb-1">À partir de</p>
+                          <p className="text-2xl font-black text-white">€{product.pricePayPal.toFixed(2)}</p>
                         </div>
-                        <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex justify-between items-center">
-                          <p className="text-xs font-black text-orange-400 uppercase tracking-tighter">LTC</p>
-                          <p className="text-base font-black text-white whitespace-nowrap">€{(parseFloat(product.priceLTC)||0).toFixed(2)}</p>
+                        <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-sm font-black text-white group-hover:bg-primary group-hover:border-primary transition-all">
+                          Voir le produit <ChevronRight className="w-4 h-4" />
                         </div>
-                        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 flex justify-between items-center">
-                          <p className="text-xs font-black text-green-400 uppercase tracking-tighter">PSC</p>
-                          <p className="text-base font-black text-white whitespace-nowrap">€{(product.pricePSC * (1 + settings.pscFeePercent / 100)).toFixed(2)}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <a href={DISCORD_TICKET} target="_blank" rel="noopener noreferrer" className="flex-1" onClick={(e) => e.stopPropagation()}>
-                          <Button className="w-full h-12 bg-[#5865F2] hover:bg-[#4752C4] text-white font-black rounded-2xl transition-all shadow-lg shadow-[#5865F2]/20 flex items-center justify-center gap-2">
-                            <DiscordIcon className="w-4 h-4 shrink-0" />
-                            {(t as any).openTicket || "Ouvrir un ticket"}
-                          </Button>
-                        </a>
                       </div>
                     </div>
                   </div>
