@@ -146,7 +146,7 @@ const itemVariants = {
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTag, setSelectedTag] = useState("All");
+  const [selectedTag, setSelectedTag] = useState("Social");
   const [showExchange, setShowExchange] = useState(false);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -459,7 +459,7 @@ export default function Home() {
                 <Search className="w-16 h-16 text-slate-700 mx-auto mb-6" />
                 <h3 className="text-2xl font-bold text-white mb-2">{(t as any).noProductsFound || "Aucun produit trouvé"}</h3>
                 <p className="text-slate-500">{(t as any).tryAdjustingSearch || "Essayez d'ajuster votre recherche ou vos filtres."}</p>
-                <Button variant="link" className="mt-4 text-primary font-bold" onClick={() => { setSearchQuery(""); setSelectedTag("All"); }}>
+                <Button variant="link" className="mt-4 text-primary font-bold" onClick={() => { setSearchQuery(""); setSelectedTag("Social"); }}>
                   {(t as any).clearFilters || "Effacer les filtres"}
                 </Button>
               </div>
