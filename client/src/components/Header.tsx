@@ -28,6 +28,12 @@ function CartWidget() {
   );
 }
 
+const LANG_FLAGS: Record<string, string> = {
+  fr: "🇫🇷", en: "🇬🇧", es: "🇪🇸", de: "🇩🇪",
+  it: "🇮🇹", pt: "🇵🇹", nl: "🇳🇱", tr: "🇹🇷",
+  ru: "🇷🇺", ar: "🇸🇦"
+};
+
 export default function Header() {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -95,7 +101,7 @@ export default function Header() {
           {/* Language Selector */}
           <div className="hidden md:block relative group">
             <button className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl text-[11px] font-black text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all">
-              <span className="text-base leading-none">{{ fr: "🇫🇷", en: "🇬🇧", es: "🇪🇸", de: "🇩🇪", it: "🇮🇹", pt: "🇵🇹", nl: "🇳🇱", tr: "🇹🇷", ru: "🇷🇺", ar: "🇸🇦" }[language as string] || "🌐"}</span>
+              <span className="text-base leading-none">{LANG_FLAGS[language] || "🌐"}</span>
               <span>{language.toUpperCase()}</span>
               <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
