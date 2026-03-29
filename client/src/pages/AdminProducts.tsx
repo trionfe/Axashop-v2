@@ -297,7 +297,7 @@ export default function AdminProducts() {
     }
   };
 
-    const handleTranslate = async () => {
+  const handleTranslate = async () => {
     if (!window.confirm("Traduire tous les produits personnalisés dans toutes les langues ?")) return;
 
     const currentProducts = await loadProducts();
@@ -358,82 +358,7 @@ export default function AdminProducts() {
     }
   };
 
-    const toggleMaintenance = async () => {
-    const newState = !maintenanceMode;
-    const label = newState ? "ACTIVER" : "DÉSACTIVER";
-    if (!window.confirm(`${label} le mode maintenance ? ${newState ? "Les visiteurs verront la page de maintenance." : "Le site sera accessible à tous."}`)) return;
-
-    setMaintenanceLoading(true);
-    try {
-      // Check if Settings table exists and has the row
-      const check = await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=id&limit=1`, {
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-      });
-      const rows = await check.json();
-      const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
-
-      if (rows?.length > 0) {
-        await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance`, {
-          method: "PATCH", headers,
-          body: JSON.stringify({ value: newState ? "true" : "false" })
-        });
-      } else {
-        await fetch(`${SUPABASE_URL}/rest/v1/Settings`, {
-          method: "POST", headers,
-          body: JSON.stringify({ key: "maintenance", value: newState ? "true" : "false" })
-        });
-      }
-      setMaintenanceMode(newState);
-      toast.success(newState ? "🔧 Mode maintenance activé" : "✅ Site remis en ligne");
-    } catch {
-      toast.error("Erreur lors du changement de mode");
-    } finally {
-      setMaintenanceLoading(false);
-    }
-  };
-
-    const handleTranslate = async () => {
-    if (!window.confirm("Traduire tous les produits personnalisés dans toutes les langues ?")) return;
-
-    const currentProducts = await loadProducts();
-    const toTranslate = currentProducts
-      .filter((p: any) => p.nameKey && !p.nameKey.startsWith("prod_"))
-      .map((p: any) => ({ id: p.id, name: p.nameKey }));
-
-    if (toTranslate.length === 0) {
-      toast.info("Aucun produit personnalisé à traduire.");
-      return;
-    }
-
-    setSaving(true);
-    toast.info(`Traduction de ${toTranslate.length} produits...`);
-
-    try {
-      const res = await fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ products: toTranslate })
-      });
-
-      if (!res.ok) throw new Error(`Erreur serveur ${res.status}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-
-      const translations = data.translations;
-      const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
-      Object.keys(translations).forEach(lang => {
-        existing[lang] = { ...(existing[lang] || {}), ...translations[lang] };
-      });
-      localStorage.setItem("custom_translations", JSON.stringify(existing));
-      toast.success(`✅ ${toTranslate.length} produits traduits en ${Object.keys(translations).length} langues !`);
-    } catch (err: any) {
-      toast.error("Erreur traduction : " + (err?.message || "inconnue"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-    const handleExportBackup = async () => {
+  const handleExportBackup = async () => {
     const currentProducts = await loadProducts();
     const currentGroups = await loadGroups();
     const backup = {
