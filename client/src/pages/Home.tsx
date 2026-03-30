@@ -147,7 +147,6 @@ const itemVariants = {
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState("Social");
-  const [tagInitialized, setTagInitialized] = useState(false);
   const [showExchange, setShowExchange] = useState(false);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -160,10 +159,7 @@ export default function Home() {
   const [productPaymentMethods, setProductPaymentMethods] = useState<Record<string, { method: 'paypal' | 'ltc' | 'paysafecard'; email?: string; pin?: string; quantity: number }>>({});
 
   useEffect(() => {
-    getProductsAsync().then(p => {
-      setProducts(p);
-      setTagInitialized(true);
-    });
+    getProductsAsync().then(setProducts);
     loadSupabaseGroups().then(setSupabaseGroups);
   }, []);
 
@@ -177,7 +173,7 @@ export default function Home() {
     const name = (t as any)[product.nameKey] || product.nameKey;
     const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTag = !tagInitialized || selectedTag === "All" || normalizeCategory(product.columnId) === selectedTag;
+    const matchesTag = products.length === 0 || selectedTag === "All" || normalizeCategory(product.columnId) === selectedTag;
     return matchesSearch && matchesTag;
   });
 
@@ -227,7 +223,10 @@ export default function Home() {
     if (storeSection) storeSection.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const totalVisible = filteredProducts.length + visibleGroups.length;
+  const visibleSupabaseGroups = supabaseGroups.filter(g =>
+    selectedTag === "All" || selectedTag.toLowerCase() === normalizeCategory(g.category || "").toLowerCase()
+  );
+  const totalVisible = filteredProducts.length + visibleGroups.length + visibleSupabaseGroups.length;
 
   return (
     <>
