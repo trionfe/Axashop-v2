@@ -307,7 +307,7 @@ export default function AdminProducts() {
       for (const product of toTranslate) {
         try {
           const res = await fetch(
-            \`https://api.mymemory.translated.net/get?q=\${encodeURIComponent(product.name)}&langpair=fr|\${lang}\`
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(product.name)}&langpair=fr|${lang}`
           );
           const data = await res.json();
           const tr = data?.responseData?.translatedText;
@@ -318,12 +318,12 @@ export default function AdminProducts() {
         await new Promise(r => setTimeout(r, 80));
       }
       done++;
-      toast.info(\`\${done}/\${LANGS.length} langues traitées...\`);
+      toast.info(`${done}/${LANGS.length} langues traitées...`);
     }
 
     localStorage.setItem("custom_translations", JSON.stringify(existing));
     setSaving(false);
-    toast.success(\`✅ \${toTranslate.length} produits traduits en \${LANGS.length} langues !\`);
+    toast.success(`✅ ${toTranslate.length} produits traduits en ${LANGS.length} langues !`);
   };
 
     const handleExportBackup = async () => {
