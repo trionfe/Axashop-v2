@@ -164,8 +164,10 @@ export default function Home() {
   }, []);
 
   // Normalise les catégories (trim + capitalize) pour éviter les doublons
-  const normalizeCategory = (cat: string) => cat.trim().charAt(0).toUpperCase() + cat.trim().slice(1).toLowerCase().charAt(0).toUpperCase() + cat.trim().slice(1).toLowerCase().slice(1);
-  const categories = [...Array.from(new Set(products.map((p: any) => normalizeCategory(p.columnId.toString())))).values()].filter(cat => cat.toLowerCase() !== "accounts" && cat.toLowerCase() !== "gaming");
+  const normalizeCategory = (cat: string) => { const s = cat.trim().toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); };
+  const productCats = Array.from(new Set(products.map((p: any) => normalizeCategory(p.columnId.toString()))));
+  const groupCats = Array.from(new Set(supabaseGroups.map((g: any) => normalizeCategory(g.category || ""))));
+  const categories = Array.from(new Set([...productCats, ...groupCats])).filter(cat => cat.toLowerCase() !== "accounts" && cat.toLowerCase() !== "gaming" && cat !== "");
 
   // Produits individuels visibles (hors ceux dans un groupe)
   const filteredProducts = products.filter((product: any) => {
