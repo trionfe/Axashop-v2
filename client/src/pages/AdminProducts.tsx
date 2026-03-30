@@ -138,7 +138,6 @@ export default function AdminProducts() {
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
 
   useEffect(() => {
-    // Load maintenance state
     fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=value&limit=1`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
     }).then(r => r.json()).then(rows => {
@@ -265,39 +264,26 @@ export default function AdminProducts() {
 
   const toggleMaintenance = async () => {
     const newState = !maintenanceMode;
-    const label = newState ? "ACTIVER" : "DÉSACTIVER";
-    if (!window.confirm(`${label} le mode maintenance ? ${newState ? "Les visiteurs verront la page de maintenance." : "Le site sera accessible à tous."}`)) return;
-
+    if (!window.confirm(`${newState ? "ACTIVER" : "DÉSACTIVER"} le mode maintenance ?`)) return;
     setMaintenanceLoading(true);
     try {
-      // Check if Settings table exists and has the row
       const check = await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=id&limit=1`, {
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
       });
       const rows = await check.json();
       const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
-
       if (rows?.length > 0) {
-        await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance`, {
-          method: "PATCH", headers,
-          body: JSON.stringify({ value: newState ? "true" : "false" })
-        });
+        await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance`, { method: "PATCH", headers, body: JSON.stringify({ value: newState ? "true" : "false" }) });
       } else {
-        await fetch(`${SUPABASE_URL}/rest/v1/Settings`, {
-          method: "POST", headers,
-          body: JSON.stringify({ key: "maintenance", value: newState ? "true" : "false" })
-        });
+        await fetch(`${SUPABASE_URL}/rest/v1/Settings`, { method: "POST", headers, body: JSON.stringify({ key: "maintenance", value: newState ? "true" : "false" }) });
       }
       setMaintenanceMode(newState);
       toast.success(newState ? "🔧 Mode maintenance activé" : "✅ Site remis en ligne");
-    } catch {
-      toast.error("Erreur lors du changement de mode");
-    } finally {
-      setMaintenanceLoading(false);
-    }
+    } catch { toast.error("Erreur lors du changement de mode"); }
+    finally { setMaintenanceLoading(false); }
   };
 
-  const handleTranslate = async () => {
+    const handleTranslate = async () => {
     if (!window.confirm("Traduire tous les produits personnalisés dans toutes les langues ?")) return;
 
     const currentProducts = await loadProducts();
@@ -311,54 +297,36 @@ export default function AdminProducts() {
     }
 
     setSaving(true);
-    toast.info(`Traduction de ${toTranslate.length} produits...`);
+    const LANGS = ["fr","es","de","it","pt","nl","tr","ru"];
+    const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
+    let done = 0;
+    toast.info(`Traduction de ${toTranslate.length} produits × ${LANGS.length} langues...`);
 
-    const LANGS = [
-      { code: "fr", deepl: "FR" },
-      { code: "es", deepl: "ES" },
-      { code: "de", deepl: "DE" },
-      { code: "it", deepl: "IT" },
-      { code: "pt", deepl: "PT-PT" },
-      { code: "nl", deepl: "NL" },
-      { code: "tr", deepl: "TR" },
-      { code: "ru", deepl: "RU" },
-    ];
-
-    try {
-      const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
-      let translated = 0;
-
-      for (const lang of LANGS) {
-        const translations: Record<string, string> = {};
-        for (const product of toTranslate) {
-          try {
-            const res = await fetch(
-              `https://api.mymemory.translated.net/get?q=${encodeURIComponent(product.name)}&langpair=fr|${lang.deepl.split("-")[0].toLowerCase()}`
-            );
-            const data = await res.json();
-            const translation = data?.responseData?.translatedText;
-            if (translation && translation !== product.name) {
-              translations[product.id] = translation;
-            }
-          } catch { /* skip */ }
-        }
-        if (!existing[lang.code]) existing[lang.code] = {};
-        Object.assign(existing[lang.code], translations);
-        translated++;
-        toast.info(`Progression: ${translated}/${LANGS.length} langues...`);
+    for (const lang of LANGS) {
+      if (!existing[lang]) existing[lang] = {};
+      for (const product of toTranslate) {
+        try {
+          const res = await fetch(
+            \`https://api.mymemory.translated.net/get?q=\${encodeURIComponent(product.name)}&langpair=fr|\${lang}\`
+          );
+          const data = await res.json();
+          const tr = data?.responseData?.translatedText;
+          if (tr && tr !== product.name && !tr.toLowerCase().includes("mymemory")) {
+            existing[lang][product.id] = tr;
+          }
+        } catch { /* skip */ }
+        await new Promise(r => setTimeout(r, 80));
       }
-
-      // Arabic separately (not in mymemory reliably, keep original)
-      localStorage.setItem("custom_translations", JSON.stringify(existing));
-      toast.success(`✅ ${toTranslate.length} produits traduits en ${LANGS.length} langues !`);
-    } catch (err: any) {
-      toast.error("Erreur traduction : " + (err?.message || "inconnue"));
-    } finally {
-      setSaving(false);
+      done++;
+      toast.info(\`\${done}/\${LANGS.length} langues traitées...\`);
     }
+
+    localStorage.setItem("custom_translations", JSON.stringify(existing));
+    setSaving(false);
+    toast.success(\`✅ \${toTranslate.length} produits traduits en \${LANGS.length} langues !\`);
   };
 
-  const handleExportBackup = async () => {
+    const handleExportBackup = async () => {
     const currentProducts = await loadProducts();
     const currentGroups = await loadGroups();
     const backup = {
