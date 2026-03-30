@@ -111,19 +111,19 @@ export default function Header() {
               <span>{language?.toUpperCase()}</span>
               <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
-            <div className="absolute right-0 top-full mt-2 w-44 bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <div className="absolute right-0 top-full mt-2 w-28 bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
               {["fr","en","es","de","it","pt","nl","tr","ru","ar"].map(code => (
                 <button
                   key={code}
                   onClick={() => setLanguage(code as any)}
-                  className={`w-full px-4 py-2.5 text-left text-[12px] font-bold transition-all flex items-center gap-2 ${
+                  className={`w-full px-4 py-2.5 text-left text-[11px] font-bold transition-all flex items-center gap-2 ${
                     language === code
                       ? "bg-primary/20 text-primary"
                       : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
                   }`}
                 >
                   <span className="text-base">{LANG_FLAGS[code]}</span>
-                  <span>{LANG_NAMES[code]}</span>
+                  <span className="uppercase">{code}</span>
                 </button>
               ))}
             </div>
