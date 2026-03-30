@@ -29,9 +29,15 @@ function CartWidget() {
 }
 
 const LANG_FLAGS: Record<string, string> = {
-  fr: "🇫🇷", en: "🇬🇧", es: "🇪🇸", de: "🇩🇪",
-  it: "🇮🇹", pt: "🇵🇹", nl: "🇳🇱", tr: "🇹🇷",
-  ru: "🇷🇺", ar: "🇸🇦"
+  "fr": "🇫🇷", "en": "🇬🇧", "es": "🇪🇸", "de": "🇩🇪",
+  "it": "🇮🇹", "pt": "🇵🇹", "nl": "🇳🇱", "tr": "🇹🇷",
+  "ru": "🇷🇺", "ar": "🇸🇦"
+};
+
+const LANG_NAMES: Record<string, string> = {
+  "fr": "Français", "en": "English", "es": "Español", "de": "Deutsch",
+  "it": "Italiano", "pt": "Português", "nl": "Nederlands", "tr": "Türkçe",
+  "ru": "Русский", "ar": "العربية"
 };
 
 export default function Header() {
@@ -101,32 +107,23 @@ export default function Header() {
           {/* Language Selector */}
           <div className="hidden md:block relative group">
             <button className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl text-[11px] font-black text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all">
-              <span className="text-lg leading-none">{LANG_FLAGS[language] || "🌐"}</span>
+              <span className="text-base">{LANG_FLAGS[language as string] ?? "🌐"}</span>
+              <span>{language?.toUpperCase()}</span>
               <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
-            <div className="absolute right-0 top-full mt-2 w-32 bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              {[
-                { code: "fr", label: "🇫🇷 FR" },
-                { code: "en", label: "🇬🇧 EN" },
-                { code: "es", label: "🇪🇸 ES" },
-                { code: "de", label: "🇩🇪 DE" },
-                { code: "it", label: "🇮🇹 IT" },
-                { code: "pt", label: "🇵🇹 PT" },
-                { code: "nl", label: "🇳🇱 NL" },
-                { code: "tr", label: "🇹🇷 TR" },
-                { code: "ru", label: "🇷🇺 RU" },
-                { code: "ar", label: "🇸🇦 AR" },
-              ].map(({ code, label }) => (
+            <div className="absolute right-0 top-full mt-2 w-44 bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              {["fr","en","es","de","it","pt","nl","tr","ru","ar"].map(code => (
                 <button
                   key={code}
                   onClick={() => setLanguage(code as any)}
-                  className={`w-full px-4 py-2.5 text-left text-[11px] font-bold transition-all ${
+                  className={`w-full px-4 py-2.5 text-left text-[12px] font-bold transition-all flex items-center gap-2 ${
                     language === code
                       ? "bg-primary/20 text-primary"
                       : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
                   }`}
                 >
-                  {label}
+                  <span className="text-base">{LANG_FLAGS[code]}</span>
+                  <span>{LANG_NAMES[code]}</span>
                 </button>
               ))}
             </div>
