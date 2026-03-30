@@ -1,288 +1,762 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useState, useEffect, useRef } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, Search, Edit2, Trash2, Save, X, Settings, Upload, RefreshCw, Layers, Package, ChevronDown, ChevronUp } from "lucide-react";
+import { getSettings, saveSettings } from "@/lib/products";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
-import { Menu, X, ChevronRight, ShoppingCart } from "lucide-react";
-import { useLocation } from "wouter";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { translations } from "@/lib/translations";
-import { useCart } from "@/contexts/CartContext";
+const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
 
-function CartWidget() {
-  const { getTotalItems } = useCart();
-  const [, navigate] = useLocation();
-  const totalItems = getTotalItems();
+// ── Produits simples (table Products) ────────────────────────────────────────
+async function loadProducts(): Promise<any[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=*&order=id.asc`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return rows[0]?.Data || [];
+  } catch { return []; }
+}
 
+// Compresse les images base64 avant sauvegarde pour éviter les erreurs de taille
+async function compressImage(base64: string, maxWidth = 900): Promise<string> {
+  if (!base64 || !base64.startsWith("data:image")) return base64;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ratio = Math.min(1, maxWidth / img.width);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/webp", 0.82));
+    };
+    img.onerror = () => resolve(base64);
+    img.src = base64;
+  });
+}
+
+async function compressAllImages(products: any[]): Promise<any[]> {
+  return Promise.all(products.map(async p => ({
+    ...p,
+    image: p.image ? await compressImage(p.image) : p.image
+  })));
+}
+
+async function saveProducts(products: any[]): Promise<boolean> {
+  try {
+    const compressed = await compressAllImages(products);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    const rows = await res.json();
+    const body = JSON.stringify({ Data: compressed });
+    const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+    if (rows?.length > 0) {
+      return (await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, { method: "PATCH", headers, body })).ok;
+    } else {
+      return (await fetch(`${SUPABASE_URL}/rest/v1/Products`, { method: "POST", headers, body })).ok;
+    }
+  } catch { return false; }
+}
+
+// ── Groupes (table Groups) ───────────────────────────────────────────────────
+async function loadGroups(): Promise<any[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/Groups?select=*&order=id.asc`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!res.ok) return [];
+    return await res.json() || [];
+  } catch { return []; }
+}
+async function saveGroup(group: any): Promise<boolean> {
+  try {
+    const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+    if (group.id) {
+      return (await fetch(`${SUPABASE_URL}/rest/v1/Groups?id=eq.${group.id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ label: group.label, category: group.category, image: group.image, options: group.options })
+      })).ok;
+    } else {
+      return (await fetch(`${SUPABASE_URL}/rest/v1/Groups`, {
+        method: "POST", headers, body: JSON.stringify({ label: group.label, category: group.category, image: group.image, options: group.options })
+      })).ok;
+    }
+  } catch { return false; }
+}
+async function deleteGroup(id: number): Promise<boolean> {
+  try {
+    return (await fetch(`${SUPABASE_URL}/rest/v1/Groups?id=eq.${id}`, {
+      method: "DELETE",
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    })).ok;
+  } catch { return false; }
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <Button
-      onClick={() => navigate('/cart')}
-      className="relative h-10 px-4 bg-white/[0.03] border border-white/10 text-white hover:bg-white/5 rounded-xl transition-all"
-    >
-      <ShoppingCart className="w-5 h-5" />
-      {totalItems > 0 && (
-        <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">
-          {totalItems}
-        </span>
-      )}
-    </Button>
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+      {children}
+    </div>
   );
 }
 
-const LANG_FLAGS: Record<string, string> = {
-  "fr": "🇫🇷", "en": "🇬🇧", "es": "🇪🇸", "de": "🇩🇪",
-  "it": "🇮🇹", "pt": "🇵🇹", "nl": "🇳🇱", "tr": "🇹🇷",
-  "ru": "🇷🇺", "ar": "🇸🇦"
-};
+const EMPTY_PRODUCT = { id: "", columnId: "Social", nameKey: "", descKey: "", pricePayPal: "0", priceLTC: "0", pricePSC: "0", image: "", stock: 29 };
+const EMPTY_GROUP = { label: "", category: "Social", image: "", options: [] };
+const EMPTY_OPTION = { id: "", name: "", pricePayPal: "0", priceLTC: "0", pricePSC: "0", image: "", stock: 29 };
 
-const LANG_NAMES: Record<string, string> = {
-  "fr": "Français", "en": "English", "es": "Español", "de": "Deutsch",
-  "it": "Italiano", "pt": "Português", "nl": "Nederlands", "tr": "Türkçe",
-  "ru": "Русский", "ar": "العربية"
-};
+export default function AdminProducts() {
+  const [tab, setTab] = useState<"products" | "groups">("products");
+  const [products, setProducts] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [settings, setSettingsLocal] = useState(getSettings());
 
-export default function Header() {
-  const { user, logout } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [, navigate] = useLocation();
-  const { language, setLanguage } = useLanguage();
+  // Modal produit simple
+  const [modal, setModal] = useState<"add" | "edit" | null>(null);
+  const [form, setForm] = useState<any>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
 
-  const t = translations[language as keyof typeof translations] || translations.en;
+  // Modal groupe
+  const [groupModal, setGroupModal] = useState<"add" | "edit" | null>(null);
+  const [groupForm, setGroupForm] = useState<any>(null);
+  const [editingOptionIdx, setEditingOptionIdx] = useState<number | null>(null);
+  const [optionForm, setOptionForm] = useState<any>(null);
+  const groupImageRef = useRef<HTMLInputElement>(null);
+  const optionImageRef = useRef<HTMLInputElement>(null);
+  const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=value&limit=1`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    }).then(r => r.json()).then(rows => {
+      setMaintenanceMode(rows?.[0]?.value === "true");
+    }).catch(() => {});
+
+    Promise.all([loadProducts(), loadGroups()]).then(([p, g]) => {
+      setProducts(p);
+      setGroups(g);
+      setLoading(false);
+    });
   }, []);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/");
+  // ── Produits simples ─────────────────────────────────────────────────────
+  const persist = async (newProducts: any[]) => {
+    setSaving(true);
+    const ok = await saveProducts(newProducts);
+    setSaving(false);
+    if (ok) toast.success("Sauvegardé ✅");
+    else toast.error("Erreur de sauvegarde ❌");
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setter(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    const newProducts = products.map(p => p.id === form.id ? {
+      ...form, pricePayPal: parseFloat(form.pricePayPal), priceLTC: parseFloat(form.priceLTC), pricePSC: parseFloat(form.pricePSC), stock: parseInt(form.stock) || 0,
+    } : p);
+    setProducts(newProducts); setModal(null); await persist(newProducts);
+  };
+
+  const handleAdd = async () => {
+    if (!form.nameKey || !form.pricePayPal) { toast.error("Remplir au moins le nom et le prix PayPal"); return; }
+    const newProd = { ...form, id: `prod-${Date.now()}`, pricePayPal: parseFloat(form.pricePayPal), priceLTC: parseFloat(form.priceLTC), pricePSC: parseFloat(form.pricePSC), stock: parseInt(form.stock) || 0 };
+    const newProducts = [newProd, ...products];
+    setProducts(newProducts); setModal(null); await persist(newProducts);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Supprimer ce produit ?")) return;
+    const newProducts = products.filter(p => p.id !== id);
+    setProducts(newProducts); await persist(newProducts);
+  };
+
+  // ── Groupes ──────────────────────────────────────────────────────────────
+  const openAddGroup = () => {
+    setGroupForm({ ...EMPTY_GROUP, options: [] });
+    setGroupModal("add");
+    setEditingOptionIdx(null);
+    setOptionForm(null);
+  };
+
+  const openEditGroup = (g: any) => {
+    setGroupForm({ ...g, options: g.options || [] });
+    setGroupModal("edit");
+    setEditingOptionIdx(null);
+    setOptionForm(null);
+  };
+
+  const handleGroupSave = async () => {
+    if (!groupForm.label) { toast.error("Remplir le nom du groupe"); return; }
+    setSaving(true);
+    const ok = await saveGroup(groupForm);
+    setSaving(false);
+    if (ok) {
+      toast.success("Groupe sauvegardé ✅");
+      const g = await loadGroups();
+      setGroups(g);
+      setGroupModal(null);
+    } else toast.error("Erreur ❌");
+  };
+
+  const handleGroupDelete = async (id: number) => {
+    if (!window.confirm("Supprimer ce groupe ?")) return;
+    await deleteGroup(id);
+    setGroups(groups.filter(g => g.id !== id));
+  };
+
+  // Options dans un groupe
+  const addOption = () => {
+    const opt = { ...EMPTY_OPTION, id: `opt-${Date.now()}` };
+    setGroupForm((g: any) => ({ ...g, options: [...(g.options || []), opt] }));
+    setEditingOptionIdx((groupForm.options || []).length);
+    setOptionForm(opt);
+  };
+
+  const saveOption = () => {
+    if (!optionForm.name) { toast.error("Remplir le nom de l'option"); return; }
+    const opts = [...(groupForm.options || [])];
+    opts[editingOptionIdx!] = {
+      ...optionForm,
+      pricePayPal: parseFloat(optionForm.pricePayPal),
+      priceLTC: parseFloat(optionForm.priceLTC),
+      pricePSC: parseFloat(optionForm.pricePSC),
+      stock: parseInt(optionForm.stock) || 0,
+    };
+    setGroupForm((g: any) => ({ ...g, options: opts }));
+    setEditingOptionIdx(null);
+    setOptionForm(null);
+  };
+
+  const deleteOption = (idx: number) => {
+    const opts = (groupForm.options || []).filter((_: any, i: number) => i !== idx);
+    setGroupForm((g: any) => ({ ...g, options: opts }));
+    if (editingOptionIdx === idx) { setEditingOptionIdx(null); setOptionForm(null); }
+  };
+
+  const filteredProducts = products.filter(p =>
+    String(p.id).toLowerCase().includes(search.toLowerCase()) ||
+    String(p.columnId).toLowerCase().includes(search.toLowerCase()) ||
+    (p.nameKey && p.nameKey.toLowerCase().includes(search.toLowerCase()))
+  );
+  const filteredGroups = groups.filter(g =>
+    (g.label || "").toLowerCase().includes(search.toLowerCase()) ||
+    (g.category || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+
+  const toggleMaintenance = async () => {
+    const newState = !maintenanceMode;
+    if (!window.confirm(`${newState ? "ACTIVER" : "DÉSACTIVER"} le mode maintenance ?`)) return;
+    setMaintenanceLoading(true);
+    try {
+      const check = await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=id&limit=1`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+      });
+      const rows = await check.json();
+      const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+      if (rows?.length > 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance`, { method: "PATCH", headers, body: JSON.stringify({ value: newState ? "true" : "false" }) });
+      } else {
+        await fetch(`${SUPABASE_URL}/rest/v1/Settings`, { method: "POST", headers, body: JSON.stringify({ key: "maintenance", value: newState ? "true" : "false" }) });
+      }
+      setMaintenanceMode(newState);
+      toast.success(newState ? "🔧 Mode maintenance activé" : "✅ Site remis en ligne");
+    } catch { toast.error("Erreur lors du changement de mode"); }
+    finally { setMaintenanceLoading(false); }
+  };
+
+    const handleTranslate = async () => {
+    if (!window.confirm("Traduire tous les produits personnalisés dans toutes les langues ?")) return;
+
+    const currentProducts = await loadProducts();
+    const toTranslate = currentProducts
+      .filter((p: any) => p.nameKey && !p.nameKey.startsWith("prod_"))
+      .map((p: any) => ({ id: p.id, name: p.nameKey }));
+
+    if (toTranslate.length === 0) {
+      toast.info("Aucun produit personnalisé à traduire.");
+      return;
+    }
+
+    setSaving(true);
+    const LANGS = ["fr","es","de","it","pt","nl","tr","ru"];
+    const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
+    let done = 0;
+    toast.info(`Traduction de ${toTranslate.length} produits × ${LANGS.length} langues...`);
+
+    for (const lang of LANGS) {
+      if (!existing[lang]) existing[lang] = {};
+      for (const product of toTranslate) {
+        try {
+          const res = await fetch(
+            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(product.name)}&langpair=fr|${lang}`
+          );
+          const data = await res.json();
+          const tr = data?.responseData?.translatedText;
+          if (tr && tr !== product.name && !tr.toLowerCase().includes("mymemory")) {
+            existing[lang][product.id] = tr;
+          }
+        } catch { /* skip */ }
+        await new Promise(r => setTimeout(r, 80));
+      }
+      done++;
+      toast.info(`${done}/${LANGS.length} langues traitées...`);
+    }
+
+    localStorage.setItem("custom_translations", JSON.stringify(existing));
+    setSaving(false);
+    toast.success(`✅ ${toTranslate.length} produits traduits en ${LANGS.length} langues !`);
+  };
+
+    const handleExportBackup = async () => {
+    const currentProducts = await loadProducts();
+    const currentGroups = await loadGroups();
+    const backup = {
+      version: 1,
+      date: new Date().toISOString(),
+      products: currentProducts,
+      groups: currentGroups,
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `axashop-backup-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Backup téléchargé ✅");
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!window.confirm("Restaurer depuis ce backup ? Cela écrasera les données actuelles.")) return;
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      if (!backup.products || !Array.isArray(backup.products)) throw new Error("Fichier invalide");
+      setSaving(true);
+      const ok = await saveProducts(backup.products);
+      if (ok && backup.groups) {
+        for (const g of backup.groups) {
+          await saveGroup(g);
+        }
+      }
+      setSaving(false);
+      if (ok) {
+        setProducts(backup.products);
+        const g = await loadGroups();
+        setGroups(g);
+        toast.success("Backup restauré ✅");
+      } else {
+        toast.error("Erreur lors de la restauration ❌");
+      }
+    } catch (err) {
+      setSaving(false);
+      toast.error("Fichier backup invalide ❌");
+    }
+    e.target.value = "";
   };
 
   return (
-    <header 
-      className={`fixed top-0 z-[100] w-full transition-all duration-500 py-4 bg-background border-b border-white/10 shadow-2xl`}
-    >
-      <div className="container flex items-center justify-between overflow-visible">
-        {/* Logo */}
-        <div className="flex items-center gap-12">
-          <a href="/" className="group relative">
-            <div className="text-2xl font-black tracking-tighter text-white flex items-center whitespace-nowrap">
-              AXA<span className="text-primary group-hover:text-blue-400 transition-colors">SHOP</span>
-              <div className="ml-1 w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            </div>
-          </a>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
-            {[
-              { name: t.home, href: "/" },
-              { name: t.vouchers, href: "/vouchers" },
-              { name: "FAQ", href: "/faq" },
-              { name: t.terms, href: "/terms" },
-              { name: t.contact, href: "/contact" },
-            ].map((link) => (
-              <a 
-                key={link.name}
-                href={link.href} 
-                className="text-sm font-semibold text-slate-400 hover:text-white transition-colors relative group"
-              >
-                {link.name}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full" />
-              </a>
-            ))}
-            {(user?.role === "admin" || localStorage.getItem("admin_auth") === "true") && (
-              <a href="/admin" className="text-sm font-semibold text-primary hover:text-blue-400 transition-colors">
-                {(t as any).dashboard}
-              </a>
+    <DashboardLayout>
+      <div className="space-y-8 py-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-black tracking-tighter">Gestion des <span className="text-primary">Produits</span></h1>
+            <p className="text-slate-400 font-medium">Sauvegardé en base — visible partout.</p>
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            <Button onClick={toggleMaintenance} disabled={maintenanceLoading} variant="outline"
+              className={`h-12 px-5 font-bold rounded-xl border transition-all ${maintenanceMode ? "border-red-500/40 text-red-400 hover:bg-red-500/10 bg-red-500/5" : "border-slate-500/30 text-slate-400 hover:bg-slate-500/10"}`}>
+              {maintenanceLoading ? "..." : maintenanceMode ? "🔧 Maintenance ON" : "🔧 Maintenance OFF"}
+            </Button>
+            <Button onClick={handleTranslate} variant="outline"
+              className="h-12 px-5 border-purple-500/30 text-purple-400 hover:bg-purple-500/10 font-bold rounded-xl">
+              🌐 Traduire
+            </Button>
+            <Button onClick={handleExportBackup} variant="outline"
+              className="h-12 px-5 border-green-500/30 text-green-400 hover:bg-green-500/10 font-bold rounded-xl">
+              ⬇ Backup
+            </Button>
+            <label className="h-12 px-5 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 font-bold rounded-xl flex items-center cursor-pointer">
+              ⬆ Restaurer
+              <input type="file" accept=".json" className="hidden" onChange={handleImportBackup} />
+            </label>
+            <Button onClick={() => setShowSettings(!showSettings)} variant="outline"
+              className="h-12 px-5 border-white/10 text-white hover:bg-white/5 font-bold rounded-xl">
+              <Settings className="w-4 h-4 mr-2" />Paramètres
+            </Button>
+            {tab === "products" ? (
+              <Button onClick={() => { setForm({ ...EMPTY_PRODUCT }); setModal("add"); }}
+                className="h-12 px-5 bg-white text-black hover:bg-primary hover:text-white font-bold rounded-xl">
+                <Plus className="w-4 h-4 mr-2" />Nouveau Produit
+              </Button>
+            ) : (
+              <Button onClick={openAddGroup}
+                className="h-12 px-5 bg-primary text-white font-bold rounded-xl">
+                <Plus className="w-4 h-4 mr-2" />Nouveau Groupe
+              </Button>
             )}
-          </nav>
+          </div>
         </div>
 
-        {/* Right Side */}
-        <div className="flex items-center gap-6">
-
-
-          {/* Language Selector */}
-          <div className="hidden md:block relative group">
-            <button className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl font-black text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all">
-              <span style={{fontSize: "18px", lineHeight: 1}}>{LANG_FLAGS[language as string] ?? "🌐"}</span>
-              <span className="text-[11px]">{(language ?? "fr").toUpperCase()}</span>
-              <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            <div className="absolute right-0 top-full mt-2 w-28 bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              {["fr","en","es","de","it","pt","nl","tr","ru","ar"].map(code => (
-                <button
-                  key={code}
-                  onClick={() => setLanguage(code as any)}
-                  className={`w-full px-4 py-2.5 text-left text-[11px] font-bold transition-all flex items-center gap-2 ${
-                    language === code
-                      ? "bg-primary/20 text-primary"
-                      : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
-                  }`}
-                >
-                  <span style={{fontSize: "18px", lineHeight: 1}}>{LANG_FLAGS[code]}</span>
-                  <span className="text-[11px] uppercase">{code}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Auth Buttons */}
-          <div className="hidden md:flex items-center gap-4">
-            {user ? (
-              <div className="flex items-center gap-4">
-                <div className="flex flex-col items-end">
-                  <span className="text-xs font-bold text-white">{user.name}</span>
-                  <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Member</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="text-slate-400 hover:text-white hover:bg-white/5 rounded-xl"
-                >
-                  {t.logout}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  className="bg-[#5865F2] text-white hover:bg-[#4752C4] font-bold rounded-xl px-3 h-8 text-[11px] transition-all shadow-xl border-none"
-                  asChild
-                >
-                  <a href="https://discord.gg/axa" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 11.747 11.747 0 0 0-.617-1.25.077.077 0 0 0-.079-.037 19.736 19.736 0 0 0-4.885 1.515.069.069 0 0 0-.032.027C.533 9.048-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.419-2.157 2.419z"/>
-                    </svg>
-                    Discord
-                  </a>
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-[#0088cc] text-white hover:bg-[#0077b3] font-bold rounded-xl px-3 h-8 text-[11px] transition-all shadow-xl border-none"
-                  asChild
-                >
-                  <a href="https://t.me/+Kmd9j1fJ-dQ3Nzc0" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.52-1.4.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.45-.42-1.39-.89.03-.25.38-.51 1.07-.78 4.2-1.82 7-3.03 8.4-3.61 4-.1.17.83.17.83z"/>
-                    </svg>
-                    Telegram
-                  </a>
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden p-2 text-slate-400 hover:text-white transition-colors"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
+        {/* Tabs */}
+        <div className="flex gap-2 p-1 bg-white/[0.03] border border-white/10 rounded-2xl w-fit">
+          <button onClick={() => setTab("products")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${tab === "products" ? "bg-primary text-white" : "text-slate-400 hover:text-white"}`}>
+            <Package className="w-4 h-4" /> Produits simples
+          </button>
+          <button onClick={() => setTab("groups")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${tab === "groups" ? "bg-primary text-white" : "text-slate-400 hover:text-white"}`}>
+            <Layers className="w-4 h-4" /> Groupes / Cartes
           </button>
         </div>
+
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="glass-card p-6 rounded-3xl border-primary/30 bg-primary/5">
+              <h2 className="text-xl font-black text-white mb-4">Paramètres Globaux</h2>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Frais Paysafecard (%)</label>
+                <Input type="number" min="0" max="100" step="0.1" value={settings.pscFeePercent}
+                  onChange={e => setSettingsLocal({ ...settings, pscFeePercent: parseFloat(e.target.value) })}
+                  className="bg-white/5 border-white/10 max-w-xs" />
+              </div>
+              <div className="flex gap-2 justify-end mt-4">
+                <Button variant="ghost" onClick={() => setShowSettings(false)} className="text-slate-400">Annuler</Button>
+                <Button onClick={() => { saveSettings(settings); setShowSettings(false); toast.success("Paramètres mis à jour"); }} className="bg-primary text-white">Enregistrer</Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="relative max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+          <Input placeholder="Rechercher..." className="h-14 pl-12 bg-white/[0.02] border-white/10 rounded-2xl"
+            value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
+            <RefreshCw className="w-5 h-5 animate-spin" /><span>Chargement...</span>
+          </div>
+        ) : tab === "products" ? (
+          /* ── Liste produits simples ── */
+          <div className="grid grid-cols-1 gap-4">
+            <AnimatePresence mode="popLayout">
+              {filteredProducts.map(product => (
+                <motion.div key={product.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="glass-card p-6 rounded-3xl border-white/[0.05] flex flex-col gap-4 group hover:border-white/10 transition-all">
+                  <div className="flex items-center gap-6 flex-1">
+                    <div className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.08] overflow-hidden shrink-0">
+                      {product.image && <img src={product.image} alt="" className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-3 mb-1 flex-wrap">
+                        <span className="text-xs font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-md">{product.columnId}</span>
+                        <span className="text-xs font-bold text-green-500 bg-green-500/10 px-3 py-1 rounded-md border border-green-500/20 ml-auto">Stock: {product.stock || 0}</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-white truncate mb-2">{product.nameKey}</h3>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2">
+                          <p className="text-[8px] font-black text-blue-400 uppercase">PayPal</p>
+                          <p className="text-sm font-black text-white">€{parseFloat(product.pricePayPal).toFixed(2)}</p>
+                        </div>
+                        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-2">
+                          <p className="text-[8px] font-black text-orange-400 uppercase">LTC</p>
+                          <p className="text-sm font-black text-white">€{parseFloat(product.priceLTC).toFixed(2)}</p>
+                        </div>
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2">
+                          <p className="text-[8px] font-black text-green-400 uppercase">PSC</p>
+                          <p className="text-sm font-black text-white">€{parseFloat(product.pricePSC).toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 border-t border-white/10 pt-4">
+                    <Button size="icon" variant="ghost" onClick={() => { setForm({ ...product }); setModal("edit"); }}
+                      className="text-slate-400 hover:text-white hover:bg-white/5 rounded-xl">
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleDelete(product.id)}
+                      className="text-red-400 hover:bg-red-400/10 rounded-xl">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          /* ── Liste groupes ── */
+          <div className="space-y-3">
+            {filteredGroups.length === 0 && (
+              <div className="text-center py-16 text-slate-500">
+                <Layers className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>Aucun groupe créé</p>
+                <p className="text-xs mt-1">Crée une carte avec plusieurs options</p>
+              </div>
+            )}
+            {filteredGroups.map(g => (
+              <motion.div key={g.id} layout className="glass-card rounded-3xl border-white/[0.05] overflow-hidden hover:border-white/10 transition-all">
+                <div className="flex items-center gap-4 p-5 cursor-pointer" onClick={() => setExpandedGroup(expandedGroup === g.id ? null : g.id)}>
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] overflow-hidden shrink-0">
+                    {g.image && <img src={g.image} alt="" className="w-full h-full object-cover" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-md">{g.category}</span>
+                      <span className="text-xs text-slate-500">{(g.options || []).length} option{(g.options || []).length > 1 ? "s" : ""}</span>
+                    </div>
+                    <h3 className="text-base font-bold text-white">{g.label}</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button size="icon" variant="ghost" onClick={e => { e.stopPropagation(); openEditGroup(g); }}
+                      className="text-slate-400 hover:text-white hover:bg-white/5 rounded-xl w-8 h-8">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={e => { e.stopPropagation(); handleGroupDelete(g.id); }}
+                      className="text-red-400 hover:bg-red-400/10 rounded-xl w-8 h-8">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                    {expandedGroup === g.id ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                  </div>
+                </div>
+                <AnimatePresence>
+                  {expandedGroup === g.id && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden border-t border-white/8">
+                      <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {(g.options || []).map((opt: any, i: number) => (
+                          <div key={i} className="bg-white/[0.02] border border-white/8 rounded-2xl p-3">
+                            {opt.image && <img src={opt.image} alt="" className="w-full h-20 object-cover rounded-xl mb-2" />}
+                            <p className="text-sm font-bold text-white truncate">{opt.name}</p>
+                            <p className="text-xs text-blue-400 font-bold mt-1">€{parseFloat(opt.pricePayPal || 0).toFixed(2)}</p>
+                            <p className="text-xs text-slate-500">Stock: {opt.stock}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Mobile Navigation */}
-      {isOpen && (
-        <div className="lg:hidden fixed inset-0 top-[73px] bg-background z-[90] p-8 animate-in fade-in slide-in-from-top-4 duration-300">
-          <nav className="flex flex-col gap-6">
-            {[
-              { name: t.home, href: "/" },
-              { name: t.vouchers, href: "/vouchers" },
-              { name: "FAQ", href: "/faq" },
-              { name: t.terms, href: "/terms" },
-              { name: t.contact, href: "/contact" },
-            ].map((link) => (
-              <a 
-                key={link.name}
-                href={link.href} 
-                className="text-2xl font-bold text-slate-200 hover:text-primary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                {link.name}
-              </a>
-            ))}
-            {(user?.role === "admin" || localStorage.getItem("admin_auth") === "true") && (
-              <a href="/admin" className="text-2xl font-bold text-primary" onClick={() => setIsOpen(false)}>
-                {t.dashboard}
-              </a>
-            )}
-            
-            {/* Language Selector Mobile */}
-            <div className="mt-6">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Langue / Language</p>
-              <div className="grid grid-cols-5 gap-2">
-                {[
-                  { code: "fr", label: "🇫🇷" },
-                  { code: "en", label: "🇬🇧" },
-                  { code: "es", label: "🇪🇸" },
-                  { code: "de", label: "🇩🇪" },
-                  { code: "it", label: "🇮🇹" },
-                  { code: "pt", label: "🇵🇹" },
-                  { code: "nl", label: "🇳🇱" },
-                  { code: "tr", label: "🇹🇷" },
-                  { code: "ru", label: "🇷🇺" },
-                  { code: "ar", label: "🇸🇦" },
-                ].map(({ code, label }) => (
-                  <button
-                    key={code}
-                    onClick={() => { setLanguage(code as any); setIsOpen(false); }}
-                    className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl text-[10px] font-black transition-all border ${
-                      language === code
-                        ? "bg-primary/20 border-primary/40 text-primary"
-                        : "border-white/10 text-slate-400 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <span className="text-xl">{label}</span>
-                    <span>{code.toUpperCase()}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            <div className="pt-8 border-t border-white/10 mt-auto">
-              {user ? (
-                <Button
-                  variant="outline"
-                  onClick={handleLogout}
-                  className="w-full h-14 rounded-2xl border-white/10 text-white"
-                >
-                  {t.logout}
-                </Button>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <Button
-                    className="flex-1 h-12 rounded-2xl bg-[#5865F2] text-white font-bold text-sm hover:bg-[#4752C4]"
-                    asChild
-                  >
-                    <a href="https://discord.gg/axa" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 11.747 11.747 0 0 0-.617-1.25.077.077 0 0 0-.079-.037 19.736 19.736 0 0 0-4.885 1.515.069.069 0 0 0-.032.027C.533 9.048-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.419-2.157 2.419z"/>
-                      </svg>
-                      Discord
-                    </a>
-                  </Button>
-                  <Button
-                    className="flex-1 h-12 rounded-2xl bg-[#0088cc] text-white font-bold text-sm hover:bg-[#0077b3]"
-                    asChild
-                  >
-                    <a href="https://t.me/+Kmd9j1fJ-dQ3Nzc0" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.52-1.4.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.45-.42-1.39-.89.03-.25.38-.51 1.07-.78 4.2-1.82 7-3.03 8.4-3.61 4-.1.17.83.17.83z"/>
-                      </svg>
-                      Telegram
-                    </a>
+      {/* ── MODAL PRODUIT SIMPLE ── */}
+      <AnimatePresence>
+        {modal && form && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setModal(null)} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40" />
+            <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 sm:inset-0 sm:flex sm:items-center sm:justify-center z-50 pointer-events-none">
+              <div className="pointer-events-auto w-full sm:max-w-md bg-[#0d1117] border border-white/10 rounded-t-3xl sm:rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-black text-white">{modal === "add" ? "➕ Nouveau produit" : "✏️ Modifier"}</h2>
+                  <button onClick={() => setModal(null)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+                </div>
+                <Field label="Catégorie">
+                  <Input placeholder="Social, Discord, VPN..." value={form.columnId} onChange={e => setForm({ ...form, columnId: e.target.value })} className="bg-white/5 border-white/10 h-11" />
+                </Field>
+                <Field label="Nom du produit">
+                  <Input placeholder="Netflix Premium 4K" value={form.nameKey} onChange={e => setForm({ ...form, nameKey: e.target.value })} className="bg-white/5 border-white/10 h-11" />
+                </Field>
+                <Field label="Description (optionnel)">
+                  <Input placeholder="Compte à vie..." value={form.descKey || ""} onChange={e => setForm({ ...form, descKey: e.target.value })} className="bg-white/5 border-white/10 h-11" />
+                </Field>
+                <div className="grid grid-cols-3 gap-3">
+                  <Field label="💙 PayPal (€)">
+                    <Input type="number" step="0.01" value={form.pricePayPal} onChange={e => setForm({ ...form, pricePayPal: e.target.value })} className="bg-blue-500/10 border-blue-500/20 h-11 text-center font-bold" />
+                  </Field>
+                  <Field label="🟠 LTC">
+                    <Input type="number" step="0.000001" value={form.priceLTC} onChange={e => setForm({ ...form, priceLTC: e.target.value })} className="bg-orange-500/10 border-orange-500/20 h-11 text-center font-bold" />
+                  </Field>
+                  <Field label="💚 PSC (€)">
+                    <Input type="number" step="0.01" value={form.pricePSC} onChange={e => setForm({ ...form, pricePSC: e.target.value })} className="bg-green-500/10 border-green-500/20 h-11 text-center font-bold" />
+                  </Field>
+                </div>
+                <Field label="Stock">
+                  <div className="flex gap-2">
+                    <Input type="number" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} className="bg-white/5 border-white/10 h-11 flex-1" />
+                    <button type="button" onClick={() => setForm({ ...form, stock: 999999 })}
+                      className="px-3 h-11 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-lg hover:bg-primary/20 hover:border-primary/40 transition-all">∞</button>
+                  </div>
+                </Field>
+                <Field label="Image">
+                  <input ref={imageRef} type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, (v) => setForm((p: any) => ({ ...p, image: v })))} />
+                  {form.image ? (
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden border border-white/10">
+                      <img src={form.image} alt="preview" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => setForm((p: any) => ({ ...p, image: "" }))} className="absolute top-2 right-2 bg-black/70 rounded-full p-1 text-white hover:bg-red-500/80"><X className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => imageRef.current?.click()} className="absolute bottom-2 right-2 bg-black/70 rounded-lg px-3 py-1.5 text-xs font-bold text-white hover:bg-white/20 flex items-center gap-1.5"><Upload className="w-3 h-3" /> Changer</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => imageRef.current?.click()} className="w-full h-20 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] text-slate-400 hover:border-primary/40 hover:text-primary transition-all">
+                      <Upload className="w-5 h-5" /><span className="text-xs font-bold">Cliquer pour uploader</span>
+                    </button>
+                  )}
+                </Field>
+                <div className="flex gap-3 pt-2">
+                  <Button variant="ghost" onClick={() => setModal(null)} className="flex-1 h-12 text-slate-400 border border-white/10 rounded-xl">Annuler</Button>
+                  <Button onClick={modal === "add" ? handleAdd : handleSave} disabled={saving} className="flex-1 h-12 bg-primary text-white font-black rounded-xl">
+                    {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Sauvegarder</>}
                   </Button>
                 </div>
-              )}
-            </div>
-          </nav>
-        </div>
-      )}
-    </header>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL GROUPE ── */}
+      <AnimatePresence>
+        {groupModal && groupForm && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { setGroupModal(null); setEditingOptionIdx(null); setOptionForm(null); }}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40" />
+            <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 sm:inset-0 sm:flex sm:items-center sm:justify-center z-50 pointer-events-none">
+              <div className="pointer-events-auto w-full sm:max-w-lg bg-[#0d1117] border border-white/10 rounded-t-3xl sm:rounded-3xl p-6 space-y-5 max-h-[92vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-black text-white">{groupModal === "add" ? "➕ Nouveau groupe" : "✏️ Modifier le groupe"}</h2>
+                  <button onClick={() => { setGroupModal(null); setEditingOptionIdx(null); setOptionForm(null); }} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+                </div>
+
+                <Field label="Nom du groupe">
+                  <Input placeholder="Ex: Netflix, Disney+..." value={groupForm.label} onChange={e => setGroupForm({ ...groupForm, label: e.target.value })} className="bg-white/5 border-white/10 h-11" />
+                </Field>
+                <Field label="Catégorie">
+                  <Input placeholder="Social, Discord, VPN..." value={groupForm.category} onChange={e => setGroupForm({ ...groupForm, category: e.target.value })} className="bg-white/5 border-white/10 h-11" />
+                </Field>
+                <Field label="Image de la carte">
+                  <input ref={groupImageRef} type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, (v) => setGroupForm((g: any) => ({ ...g, image: v })))} />
+                  {groupForm.image ? (
+                    <div className="relative w-full h-28 rounded-xl overflow-hidden border border-white/10">
+                      <img src={groupForm.image} alt="preview" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => setGroupForm((g: any) => ({ ...g, image: "" }))} className="absolute top-2 right-2 bg-black/70 rounded-full p-1 text-white"><X className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => groupImageRef.current?.click()} className="absolute bottom-2 right-2 bg-black/70 rounded-lg px-3 py-1.5 text-xs font-bold text-white flex items-center gap-1.5"><Upload className="w-3 h-3" /> Changer</button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => groupImageRef.current?.click()} className="w-full h-20 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] text-slate-400 hover:border-primary/40 hover:text-primary transition-all">
+                      <Upload className="w-5 h-5" /><span className="text-xs font-bold">Image principale</span>
+                    </button>
+                  )}
+                </Field>
+
+                {/* Options */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Options ({(groupForm.options || []).length})</p>
+                    <button onClick={addOption} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition-all">
+                      <Plus className="w-3 h-3" /> Ajouter option
+                    </button>
+                  </div>
+
+                  {(groupForm.options || []).map((opt: any, i: number) => (
+                    <div key={i} className="bg-white/[0.03] border border-white/8 rounded-2xl overflow-hidden">
+                      <div className="flex items-center gap-3 p-3">
+                        {opt.image && <img src={opt.image} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{opt.name || "Sans nom"}</p>
+                          <p className="text-xs text-blue-400">€{parseFloat(opt.pricePayPal || 0).toFixed(2)} — Stock: {opt.stock}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => { setEditingOptionIdx(i); setOptionForm({ ...opt }); }}
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white"><Edit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => deleteOption(i)}
+                            className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
+
+                      {/* Formulaire option inline */}
+                      <AnimatePresence>
+                        {editingOptionIdx === i && optionForm && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden border-t border-white/8">
+                            <div className="p-4 space-y-3">
+                              <Field label="Nom de l'option">
+                                <Input placeholder="Ex: Lifetime Fan" value={optionForm.name} onChange={e => setOptionForm({ ...optionForm, name: e.target.value })} className="bg-white/5 border-white/10 h-10" />
+                              </Field>
+                              <div className="grid grid-cols-3 gap-2">
+                                <Field label="💙 PayPal">
+                                  <Input type="number" step="0.01" value={optionForm.pricePayPal} onChange={e => setOptionForm({ ...optionForm, pricePayPal: e.target.value })} className="bg-blue-500/10 border-blue-500/20 h-10 text-center font-bold" />
+                                </Field>
+                                <Field label="🟠 LTC">
+                                  <Input type="number" step="0.000001" value={optionForm.priceLTC} onChange={e => setOptionForm({ ...optionForm, priceLTC: e.target.value })} className="bg-orange-500/10 border-orange-500/20 h-10 text-center font-bold" />
+                                </Field>
+                                <Field label="💚 PSC">
+                                  <Input type="number" step="0.01" value={optionForm.pricePSC} onChange={e => setOptionForm({ ...optionForm, pricePSC: e.target.value })} className="bg-green-500/10 border-green-500/20 h-10 text-center font-bold" />
+                                </Field>
+                              </div>
+                              <Field label="Stock">
+                                <div className="flex gap-2">
+                                  <Input type="number" value={optionForm.stock} onChange={e => setOptionForm({ ...optionForm, stock: e.target.value })} className="bg-white/5 border-white/10 h-10 flex-1" />
+                                  <button type="button" onClick={() => setOptionForm({ ...optionForm, stock: 999999 })}
+                                    className="px-3 h-10 rounded-xl bg-white/5 border border-white/10 text-white font-bold hover:bg-primary/20 transition-all">∞</button>
+                                </div>
+                              </Field>
+                              <Field label="Image">
+                                <input ref={optionImageRef} type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, (v) => setOptionForm((o: any) => ({ ...o, image: v })))} />
+                                {optionForm.image ? (
+                                  <div className="relative w-full h-24 rounded-xl overflow-hidden border border-white/10">
+                                    <img src={optionForm.image} alt="" className="w-full h-full object-cover" />
+                                    <button type="button" onClick={() => setOptionForm((o: any) => ({ ...o, image: "" }))} className="absolute top-2 right-2 bg-black/70 rounded-full p-1 text-white"><X className="w-3 h-3" /></button>
+                                    <button type="button" onClick={() => optionImageRef.current?.click()} className="absolute bottom-2 right-2 bg-black/70 rounded-lg px-2 py-1 text-xs text-white flex items-center gap-1"><Upload className="w-3 h-3" /> Changer</button>
+                                  </div>
+                                ) : (
+                                  <button type="button" onClick={() => optionImageRef.current?.click()} className="w-full h-16 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] text-slate-400 hover:border-primary/40 text-xs font-bold">
+                                    <Upload className="w-4 h-4" /> Uploader image
+                                  </button>
+                                )}
+                              </Field>
+                              <button onClick={saveOption} className="w-full h-10 bg-primary text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2">
+                                <Save className="w-3.5 h-3.5" /> Valider l'option
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button variant="ghost" onClick={() => { setGroupModal(null); setEditingOptionIdx(null); setOptionForm(null); }} className="flex-1 h-12 text-slate-400 border border-white/10 rounded-xl">Annuler</Button>
+                  <Button onClick={handleGroupSave} disabled={saving} className="flex-1 h-12 bg-primary text-white font-black rounded-xl">
+                    {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Sauvegarder le groupe</>}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </DashboardLayout>
   );
 }
