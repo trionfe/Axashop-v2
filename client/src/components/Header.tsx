@@ -106,9 +106,9 @@ export default function Header() {
 
           {/* Language Selector */}
           <div className="hidden md:block relative group">
-            <button className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl text-[11px] font-black text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all">
-              <span className="text-base">{LANG_FLAGS[language as string] ?? "🌐"}</span>
-              <span>{language?.toUpperCase()}</span>
+            <button className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl font-black text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all">
+              <span style={{fontSize: "18px", lineHeight: 1}}>{LANG_FLAGS[language as string] ?? "🌐"}</span>
+              <span className="text-[11px]">{(language ?? "fr").toUpperCase()}</span>
               <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
             <div className="absolute right-0 top-full mt-2 w-28 bg-[#0f172a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
@@ -122,8 +122,8 @@ export default function Header() {
                       : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
                   }`}
                 >
-                  <span className="text-base">{LANG_FLAGS[code]}</span>
-                  <span className="uppercase">{code}</span>
+                  <span style={{fontSize: "18px", lineHeight: 1}}>{LANG_FLAGS[code]}</span>
+                  <span className="text-[11px] uppercase">{code}</span>
                 </button>
               ))}
             </div>
