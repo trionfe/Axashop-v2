@@ -1,10 +1,12 @@
+// client/src/pages/AdminVisitors.tsx
+// ✅ SÉCURISÉ — Toutes les requêtes passent par le serveur. Zéro clé dans le frontend.
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { RefreshCw, Globe, Monitor, Smartphone, Tablet, Wifi, Shield, Clock, Search, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
-const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
+// ✅ Plus de SUPABASE_URL / SUPABASE_KEY ici
 
 const FLAG = (code: string) => code ? `https://flagcdn.com/24x18/${code.toLowerCase()}.png` : null;
 
@@ -37,14 +39,12 @@ export default function AdminVisitors() {
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/Visitors?select=*&order=visited_at.desc&limit=500`, {
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-      });
+      // ✅ Appel vers notre API serveur (authentifié côté serveur)
+      const res = await fetch("/api/supabase/visitors");
       if (!res.ok) { setLoading(false); return; }
       const data = await res.json();
       setVisitors(data || []);
 
-      // Stats
       const today = new Date().toDateString();
       const todayVisits = data.filter((v: any) => new Date(v.visited_at).toDateString() === today);
       const uniqueIPs = new Set(data.map((v: any) => v.ip)).size;
@@ -55,19 +55,15 @@ export default function AdminVisitors() {
   }
 
   async function deleteVisitor(id: number) {
-    await fetch(`${SUPABASE_URL}/rest/v1/Visitors?id=eq.${id}`, {
-      method: "DELETE",
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
+    // ✅ DELETE via serveur (authentifié)
+    await fetch(`/api/supabase/visitors/${id}`, { method: "DELETE" });
     setVisitors(v => v.filter((x: any) => x.id !== id));
   }
 
   async function clearAll() {
     if (!confirm("Supprimer tous les visiteurs ?")) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/Visitors?id=gt.0`, {
-      method: "DELETE",
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
+    // ✅ DELETE via serveur (authentifié)
+    await fetch("/api/supabase/visitors", { method: "DELETE" });
     setVisitors([]);
     setStats({ total: 0, today: 0, unique: 0, mobile: 0 });
   }
@@ -84,8 +80,6 @@ export default function AdminVisitors() {
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
-
-        {/* Header */}
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black text-white">Visiteurs</h1>
@@ -106,147 +100,106 @@ export default function AdminVisitors() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Total visites", value: stats.total, icon: Globe, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
-            { label: "Aujourd'hui", value: stats.today, icon: Clock, color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
-            { label: "IPs uniques", value: stats.unique, icon: Shield, color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
-            { label: "Mobile", value: stats.mobile, icon: Smartphone, color: "text-orange-400", bg: "bg-orange-500/10 border-orange-500/20" },
-          ].map(s => (
-            <div key={s.label} className={`rounded-2xl border p-4 ${s.bg}`}>
-              <s.icon className={`w-5 h-5 ${s.color} mb-2`} />
-              <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-              <div className="text-slate-400 text-xs mt-0.5">{s.label}</div>
+            { label: "Total", value: stats.total, icon: Globe },
+            { label: "Aujourd'hui", value: stats.today, icon: Clock },
+            { label: "IPs uniques", value: stats.unique, icon: Wifi },
+            { label: "Mobile", value: stats.mobile, icon: Smartphone },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="bg-white/3 border border-white/8 rounded-xl p-3 flex items-center gap-3">
+              <Icon className="w-5 h-5 text-primary shrink-0" />
+              <div>
+                <p className="text-xs text-slate-500">{label}</p>
+                <p className="text-lg font-black text-white">{value}</p>
+              </div>
             </div>
           ))}
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Rechercher IP, ville, pays, navigateur..."
-            className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-primary/50" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher par IP, ville, pays, navigateur..."
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-primary/50"
+          />
         </div>
 
         {/* List */}
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <RefreshCw className="w-6 h-6 text-primary animate-spin" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">
-            <Globe className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p>Aucun visiteur enregistré</p>
-            <p className="text-xs mt-1">Les visites s'enregistrent automatiquement</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((v: any) => (
-              <motion.div key={v.id} layout
-                className="bg-white/[0.03] border border-white/8 rounded-2xl overflow-hidden hover:border-white/15 transition-all">
-
-                {/* Row principale */}
-                <div className="flex items-center gap-3 p-3.5 cursor-pointer"
-                  onClick={() => setExpanded(expanded === v.id ? null : v.id)}>
-
-                  {/* Flag + IP */}
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    {FLAG(v.country_code) && (
-                      <img src={FLAG(v.country_code)!} alt={v.country_code}
-                        className="w-6 h-4 rounded-sm object-cover flex-shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <div className="font-mono text-sm text-white font-bold truncate flex items-center gap-1.5">
-                        {v.ip}
-                        {v.is_vpn && (
-                          <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded-md font-bold">VPN</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-400 truncate">{v.city}, {v.country}</div>
-                    </div>
-                  </div>
-
-                  {/* Device + Browser */}
-                  <div className="hidden md:flex items-center gap-2">
+        <div className="space-y-2">
+          {loading ? (
+            <div className="text-center py-12 text-slate-500">Chargement...</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">Aucun visiteur trouvé</div>
+          ) : (
+            <AnimatePresence>
+              {filtered.map((v: any) => (
+                <motion.div key={v.id}
+                  initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="bg-white/3 border border-white/8 rounded-xl overflow-hidden">
+                  <div className="p-3 flex items-center gap-3 cursor-pointer"
+                    onClick={() => setExpanded(expanded === String(v.id) ? null : String(v.id))}>
                     <DeviceIcon device={v.device} />
-                    <span className={`text-xs font-bold ${BROWSER_COLORS[v.browser] || "text-slate-400"}`}>
-                      {v.browser} {v.browser_version}
-                    </span>
-                  </div>
-
-                  {/* Page */}
-                  <div className="hidden lg:block">
-                    <span className="text-xs bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-slate-300 font-mono">
-                      {v.page || "/"}
-                    </span>
-                  </div>
-
-                  {/* Time */}
-                  <div className="text-xs text-slate-500 flex-shrink-0">{timeAgo(v.visited_at)}</div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {v.country_code && (
+                          <img src={FLAG(v.country_code)!} alt={v.country_code}
+                            className="w-4 h-3 rounded-sm object-cover shrink-0" />
+                        )}
+                        <span className="text-white text-sm font-bold truncate">{v.ip}</span>
+                        <span className="text-slate-500 text-xs">{v.city}, {v.country}</span>
+                        <span className={`text-xs font-semibold ${BROWSER_COLORS[v.browser] || "text-slate-400"}`}>{v.browser} {v.browser_version}</span>
+                        <span className="text-slate-600 text-xs">{v.os}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-slate-500 text-xs truncate">{v.page}</span>
+                        <span className="text-slate-600 text-xs shrink-0">{timeAgo(v.visited_at)}</span>
+                        {v.is_vpn && <Shield className="w-3 h-3 text-orange-400 shrink-0" title="VPN détecté" />}
+                      </div>
+                    </div>
                     <button onClick={e => { e.stopPropagation(); deleteVisitor(v.id); }}
-                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-all">
+                      className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-600 hover:text-red-400 transition-all shrink-0">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                    {expanded === v.id
-                      ? <ChevronUp className="w-4 h-4 text-slate-500" />
-                      : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                    {expanded === String(v.id) ? <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
                   </div>
-                </div>
 
-                {/* Expanded detail */}
-                <AnimatePresence>
-                  {expanded === v.id && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                      className="overflow-hidden border-t border-white/8">
-                      <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {[
-                          { label: "IP", value: v.ip },
-                          { label: "Pays", value: `${v.country} (${v.country_code})` },
-                          { label: "Ville", value: v.city },
-                          { label: "Région", value: v.region },
-                          { label: "FAI / Réseau", value: v.isp },
-                          { label: "Type connexion", value: v.connection_type },
-                          { label: "VPN", value: v.is_vpn ? "🔴 Oui" : "🟢 Non" },
-                          { label: "Navigateur", value: `${v.browser} ${v.browser_version}` },
-                          { label: "OS", value: v.os },
-                          { label: "Appareil", value: v.device },
-                          { label: "Langue", value: v.language },
-                          { label: "Écran", value: v.screen },
-                          { label: "Fuseau", value: v.timezone },
-                          { label: "Page visitée", value: v.page },
-                          { label: "Référent", value: v.referrer },
-                          { label: "Référent complet", value: v.referrer_full || "—" },
-                          { label: "RAM", value: v.ram },
-                          { label: "CPU", value: v.cpu },
-                          { label: "Réseau", value: v.network_type },
-                          { label: "Vitesse réseau", value: v.network_speed },
-                          { label: "Mode privé", value: v.is_private ? "🔴 Oui" : "🟢 Non" },
-                          { label: "Bloqueur pub", value: v.has_adblock ? "🔴 Oui" : "🟢 Non" },
-                          { label: "Onglet caché", value: v.tab_hidden ? "Oui (arrière-plan)" : "Non (actif)" },
-                          { label: "Profondeur couleur", value: v.color_depth },
-                          { label: "Session ID", value: v.session_id },
-                          { label: "Date/Heure", value: new Date(v.visited_at).toLocaleString("fr-FR") },
-                        ].map(item => (
-                          <div key={item.label} className="bg-white/[0.03] rounded-xl p-3 border border-white/5">
-                            <div className="text-xs text-slate-500 mb-1">{item.label}</div>
-                            <div className="text-sm text-white font-medium break-all">{item.value || "—"}</div>
+                  <AnimatePresence>
+                    {expanded === String(v.id) && (
+                      <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }}
+                        className="overflow-hidden border-t border-white/5">
+                        <div className="p-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                          {[
+                            ["ISP", v.isp], ["Réseau", v.connection_type], ["Type", v.network_type],
+                            ["Vitesse", v.network_speed], ["RAM", v.ram], ["CPU", v.cpu],
+                            ["Langue", v.language], ["Écran", v.screen], ["Couleurs", v.color_depth],
+                            ["Timezone", v.timezone], ["Session", v.session_id],
+                            ["Referrer", v.referrer_full || v.referrer],
+                          ].map(([label, value]) => (
+                            <div key={label}>
+                              <span className="text-slate-600">{label}: </span>
+                              <span className="text-slate-300">{value || "—"}</span>
+                            </div>
+                          ))}
+                          <div><span className="text-slate-600">AdBlock: </span>
+                            <span className={v.has_adblock ? "text-orange-400" : "text-green-400"}>{v.has_adblock ? "Oui" : "Non"}</span>
                           </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
-          </div>
-        )}
-
-        <p className="text-center text-xs text-slate-600 pb-4">
-          {filtered.length} visiteur{filtered.length > 1 ? "s" : ""} affiché{filtered.length > 1 ? "s" : ""}
-        </p>
+                          <div><span className="text-slate-600">Privé: </span>
+                            <span className={v.is_private ? "text-orange-400" : "text-slate-300"}>{v.is_private ? "Oui" : "Non"}</span>
+                          </div>
+                          <div><span className="text-slate-600">Tab cachée: </span>
+                            <span className="text-slate-300">{v.tab_hidden ? "Oui" : "Non"}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );
