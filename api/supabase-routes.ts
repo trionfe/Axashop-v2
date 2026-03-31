@@ -7,7 +7,7 @@
  * 
  * À ajouter dans api/index.ts AVANT export default app
  */
-
+import { registerSupabaseRoutes } from "./supabase-routes.js";
 import express from "express";
 import axios from "axios";
 
