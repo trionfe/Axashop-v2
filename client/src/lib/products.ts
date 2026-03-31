@@ -1,7 +1,6 @@
-// Produits avec support multi-prix (PayPal, LTC, Paysafecard)
-
-const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
-const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
+// client/src/lib/products.ts
+// ✅ SÉCURISÉ — Aucune clé API dans ce fichier.
+// Toutes les opérations Supabase passent par les routes serveur /api/supabase/*
 
 // Normalise les prix en numbers pour éviter les bugs d'affichage côté client
 function normalizeProducts(products: any[]): any[] {
@@ -13,7 +12,6 @@ function normalizeProducts(products: any[]): any[] {
     stock: parseInt(p.stock) || 0,
   }));
 }
-
 
 export const DEFAULT_PRODUCTS = [
   {"id":"acc-2025-account","columnId":"Accounts","nameKey":"prod_acc_2025_account_name","descKey":"prod_acc_2025_account_desc","pricePayPal":1.00,"priceLTC":0.00012,"pricePSC":1.00,"image":"https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60","stock":29},
@@ -61,74 +59,55 @@ export const DEFAULT_PRODUCTS = [
   {"id":"game-roblox-2000rbx","columnId":"Gaming","nameKey":"prod_game_roblox_2000rbx_name","descKey":"prod_game_roblox_2000rbx_desc","pricePayPal":15.00,"priceLTC":0.00180,"pricePSC":15.00,"image":"https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60","stock":29},
 ];
 
-// ── Supabase helpers ──────────────────────────────────────────────────────────
+// ── Helpers sécurisés — passent par le serveur, jamais par Supabase directement ──
 
-async function supabaseLoad(): Promise<any[] | null> {
+async function apiLoad(): Promise<any[] | null> {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=*&limit=1`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
+    const res = await fetch("/api/supabase/products");
     if (!res.ok) return null;
     const rows = await res.json();
-    if (!rows || rows.length === 0) return null;
+    if (!Array.isArray(rows) || rows.length === 0) return null;
     const data = rows[0]?.Data;
-    // Validate: doit être un tableau de produits avec des vrais prix
     if (!Array.isArray(data) || data.length === 0) return null;
     return normalizeProducts(data);
   } catch { return null; }
 }
 
-async function supabaseSave(products: any[]): Promise<boolean> {
+async function apiSave(products: any[]): Promise<boolean> {
   try {
-    const check = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    const res = await fetch("/api/supabase/products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Data: products }),
     });
-    const rows = await check.json();
-    if (rows && rows.length > 0) {
-      const upd = await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, {
-        method: "PATCH",
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ Data: products })
-      });
-      return upd.ok;
-    } else {
-      const ins = await fetch(`${SUPABASE_URL}/rest/v1/Products`, {
-        method: "POST",
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ Data: products })
-      });
-      return ins.ok;
-    }
+    return res.ok;
   } catch { return false; }
 }
 
-// Pas de cache — toujours lire depuis Supabase pour avoir les vrais prix
-
 export async function getProductsAsync(): Promise<any[]> {
-  const fromSupabase = await supabaseLoad();
-  if (fromSupabase) return fromSupabase;
-  // Supabase vide → retourner les DEFAULT_PRODUCTS sans écraser Supabase
+  const fromApi = await apiLoad();
+  if (fromApi) return fromApi;
   return DEFAULT_PRODUCTS;
 }
 
 export async function saveProductsAsync(products: any[]): Promise<boolean> {
-  return await supabaseSave(products);
+  return await apiSave(products);
 }
 
 export const getProducts = () => DEFAULT_PRODUCTS;
 
 export const saveProducts = (products: any[]) => {
-  supabaseSave(products).catch(() => {});
+  apiSave(products).catch(() => {});
 };
 
 export const getSettings = () => {
-  if (typeof window === 'undefined') return { pscFeePercent: 10 };
-  const saved = localStorage.getItem('app_settings');
+  if (typeof window === "undefined") return { pscFeePercent: 10 };
+  const saved = localStorage.getItem("app_settings");
   return saved ? JSON.parse(saved) : { pscFeePercent: 10 };
 };
 
 export const saveSettings = (settings: any) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('app_settings', JSON.stringify(settings));
+  if (typeof window !== "undefined") {
+    localStorage.setItem("app_settings", JSON.stringify(settings));
   }
 };
