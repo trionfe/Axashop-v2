@@ -7,22 +7,18 @@ import { getSettings, saveSettings } from "@/lib/products";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
-const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
+// ✅ SÉCURISÉ — Aucune clé Supabase. Tout passe par /api/supabase/* (serveur).
 
-// ── Produits simples (table Products) ────────────────────────────────────────
+// ── Produits simples ──────────────────────────────────────────────────────────
 async function loadProducts(): Promise<any[]> {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=*&order=id.asc`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
+    const res = await fetch("/api/supabase/products");
     if (!res.ok) return [];
     const rows = await res.json();
     return rows[0]?.Data || [];
   } catch { return []; }
 }
 
-// Compresse les images base64 avant sauvegarde pour éviter les erreurs de taille
 async function compressImage(base64: string, maxWidth = 900): Promise<string> {
   if (!base64 || !base64.startsWith("data:image")) return base64;
   return new Promise((resolve) => {
@@ -51,53 +47,71 @@ async function compressAllImages(products: any[]): Promise<any[]> {
 async function saveProducts(products: any[]): Promise<boolean> {
   try {
     const compressed = await compressAllImages(products);
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/Products?select=id&limit=1`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    const res = await fetch("/api/supabase/products", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Data: compressed }),
     });
-    const rows = await res.json();
-    const body = JSON.stringify({ Data: compressed });
-    const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
-    if (rows?.length > 0) {
-      return (await fetch(`${SUPABASE_URL}/rest/v1/Products?id=eq.${rows[0].id}`, { method: "PATCH", headers, body })).ok;
-    } else {
-      return (await fetch(`${SUPABASE_URL}/rest/v1/Products`, { method: "POST", headers, body })).ok;
-    }
+    return res.ok;
   } catch { return false; }
 }
 
-// ── Groupes (table Groups) ───────────────────────────────────────────────────
+// ── Groupes ───────────────────────────────────────────────────────────────────
 async function loadGroups(): Promise<any[]> {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/Groups?select=*&order=id.asc`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    });
+    const res = await fetch("/api/supabase/groups");
     if (!res.ok) return [];
     return await res.json() || [];
   } catch { return []; }
 }
+
 async function saveGroup(group: any): Promise<boolean> {
   try {
-    const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+    const payload = { label: group.label, category: group.category, image: group.image, options: group.options };
     if (group.id) {
-      return (await fetch(`${SUPABASE_URL}/rest/v1/Groups?id=eq.${group.id}`, {
-        method: "PATCH", headers, body: JSON.stringify({ label: group.label, category: group.category, image: group.image, options: group.options })
-      })).ok;
+      const res = await fetch(`/api/supabase/groups/${group.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return res.ok;
     } else {
-      return (await fetch(`${SUPABASE_URL}/rest/v1/Groups`, {
-        method: "POST", headers, body: JSON.stringify({ label: group.label, category: group.category, image: group.image, options: group.options })
-      })).ok;
+      const res = await fetch("/api/supabase/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return res.ok;
     }
   } catch { return false; }
 }
+
 async function deleteGroup(id: number): Promise<boolean> {
   try {
-    return (await fetch(`${SUPABASE_URL}/rest/v1/Groups?id=eq.${id}`, {
-      method: "DELETE",
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    })).ok;
+    const res = await fetch(`/api/supabase/groups/${id}`, { method: "DELETE" });
+    return res.ok;
   } catch { return false; }
 }
 
+// ── Maintenance ───────────────────────────────────────────────────────────────
+async function loadMaintenance(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/supabase/settings/maintenance");
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data?.maintenance === true;
+  } catch { return false; }
+}
+
+async function setMaintenanceApi(enabled: boolean): Promise<void> {
+  await fetch("/api/supabase/settings/maintenance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -123,12 +137,10 @@ export default function AdminProducts() {
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
   const [settings, setSettingsLocal] = useState(getSettings());
 
-  // Modal produit simple
   const [modal, setModal] = useState<"add" | "edit" | null>(null);
   const [form, setForm] = useState<any>(null);
   const imageRef = useRef<HTMLInputElement>(null);
 
-  // Modal groupe
   const [groupModal, setGroupModal] = useState<"add" | "edit" | null>(null);
   const [groupForm, setGroupForm] = useState<any>(null);
   const [editingOptionIdx, setEditingOptionIdx] = useState<number | null>(null);
@@ -138,12 +150,8 @@ export default function AdminProducts() {
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=value&limit=1`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-    }).then(r => r.json()).then(rows => {
-      setMaintenanceMode(rows?.[0]?.value === "true");
-    }).catch(() => {});
-
+    // ✅ Chargement maintenance via serveur
+    loadMaintenance().then(setMaintenanceMode).catch(() => {});
     Promise.all([loadProducts(), loadGroups()]).then(([p, g]) => {
       setProducts(p);
       setGroups(g);
@@ -151,7 +159,7 @@ export default function AdminProducts() {
     });
   }, []);
 
-  // ── Produits simples ─────────────────────────────────────────────────────
+  // ── Produits simples ──────────────────────────────────────────────────────
   const persist = async (newProducts: any[]) => {
     setSaving(true);
     const ok = await saveProducts(newProducts);
@@ -188,7 +196,7 @@ export default function AdminProducts() {
     setProducts(newProducts); await persist(newProducts);
   };
 
-  // ── Groupes ──────────────────────────────────────────────────────────────
+  // ── Groupes ───────────────────────────────────────────────────────────────
   const openAddGroup = () => {
     setGroupForm({ ...EMPTY_GROUP, options: [] });
     setGroupModal("add");
@@ -222,7 +230,6 @@ export default function AdminProducts() {
     setGroups(groups.filter(g => g.id !== id));
   };
 
-  // Options dans un groupe
   const addOption = () => {
     const opt = { ...EMPTY_OPTION, id: `opt-${Date.now()}` };
     setGroupForm((g: any) => ({ ...g, options: [...(g.options || []), opt] }));
@@ -261,54 +268,36 @@ export default function AdminProducts() {
     (g.category || "").toLowerCase().includes(search.toLowerCase())
   );
 
-
+  // ✅ Toggle maintenance via serveur
   const toggleMaintenance = async () => {
     const newState = !maintenanceMode;
     if (!window.confirm(`${newState ? "ACTIVER" : "DÉSACTIVER"} le mode maintenance ?`)) return;
     setMaintenanceLoading(true);
     try {
-      const check = await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance&select=id&limit=1`, {
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-      });
-      const rows = await check.json();
-      const headers = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" };
-      if (rows?.length > 0) {
-        await fetch(`${SUPABASE_URL}/rest/v1/Settings?key=eq.maintenance`, { method: "PATCH", headers, body: JSON.stringify({ value: newState ? "true" : "false" }) });
-      } else {
-        await fetch(`${SUPABASE_URL}/rest/v1/Settings`, { method: "POST", headers, body: JSON.stringify({ key: "maintenance", value: newState ? "true" : "false" }) });
-      }
+      await setMaintenanceApi(newState);
       setMaintenanceMode(newState);
       toast.success(newState ? "🔧 Mode maintenance activé" : "✅ Site remis en ligne");
     } catch { toast.error("Erreur lors du changement de mode"); }
     finally { setMaintenanceLoading(false); }
   };
 
-    const handleTranslate = async () => {
+  const handleTranslate = async () => {
     if (!window.confirm("Traduire tous les produits personnalisés dans toutes les langues ?")) return;
-
     const currentProducts = await loadProducts();
     const toTranslate = currentProducts
       .filter((p: any) => p.nameKey && !p.nameKey.startsWith("prod_"))
       .map((p: any) => ({ id: p.id, name: p.nameKey }));
-
-    if (toTranslate.length === 0) {
-      toast.info("Aucun produit personnalisé à traduire.");
-      return;
-    }
-
+    if (toTranslate.length === 0) { toast.info("Aucun produit personnalisé à traduire."); return; }
     setSaving(true);
     const LANGS = ["fr","es","de","it","pt","nl","tr","ru"];
     const existing = JSON.parse(localStorage.getItem("custom_translations") || "{}");
     let done = 0;
     toast.info(`Traduction de ${toTranslate.length} produits × ${LANGS.length} langues...`);
-
     for (const lang of LANGS) {
       if (!existing[lang]) existing[lang] = {};
       for (const product of toTranslate) {
         try {
-          const res = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(product.name)}&langpair=fr|${lang}`
-          );
+          const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(product.name)}&langpair=fr|${lang}`);
           const data = await res.json();
           const tr = data?.responseData?.translatedText;
           if (tr && tr !== product.name && !tr.toLowerCase().includes("mymemory")) {
@@ -320,21 +309,15 @@ export default function AdminProducts() {
       done++;
       toast.info(`${done}/${LANGS.length} langues traitées...`);
     }
-
     localStorage.setItem("custom_translations", JSON.stringify(existing));
     setSaving(false);
     toast.success(`✅ ${toTranslate.length} produits traduits en ${LANGS.length} langues !`);
   };
 
-    const handleExportBackup = async () => {
+  const handleExportBackup = async () => {
     const currentProducts = await loadProducts();
     const currentGroups = await loadGroups();
-    const backup = {
-      version: 1,
-      date: new Date().toISOString(),
-      products: currentProducts,
-      groups: currentGroups,
-    };
+    const backup = { version: 1, date: new Date().toISOString(), products: currentProducts, groups: currentGroups };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -356,9 +339,7 @@ export default function AdminProducts() {
       setSaving(true);
       const ok = await saveProducts(backup.products);
       if (ok && backup.groups) {
-        for (const g of backup.groups) {
-          await saveGroup(g);
-        }
+        for (const g of backup.groups) { await saveGroup(g); }
       }
       setSaving(false);
       if (ok) {
@@ -369,7 +350,7 @@ export default function AdminProducts() {
       } else {
         toast.error("Erreur lors de la restauration ❌");
       }
-    } catch (err) {
+    } catch {
       setSaving(false);
       toast.error("Fichier backup invalide ❌");
     }
@@ -461,7 +442,6 @@ export default function AdminProducts() {
             <RefreshCw className="w-5 h-5 animate-spin" /><span>Chargement...</span>
           </div>
         ) : tab === "products" ? (
-          /* ── Liste produits simples ── */
           <div className="grid grid-cols-1 gap-4">
             <AnimatePresence mode="popLayout">
               {filteredProducts.map(product => (
@@ -508,7 +488,6 @@ export default function AdminProducts() {
             </AnimatePresence>
           </div>
         ) : (
-          /* ── Liste groupes ── */
           <div className="space-y-3">
             {filteredGroups.length === 0 && (
               <div className="text-center py-16 text-slate-500">
@@ -647,7 +626,6 @@ export default function AdminProducts() {
                   <h2 className="text-lg font-black text-white">{groupModal === "add" ? "➕ Nouveau groupe" : "✏️ Modifier le groupe"}</h2>
                   <button onClick={() => { setGroupModal(null); setEditingOptionIdx(null); setOptionForm(null); }} className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/5 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
                 </div>
-
                 <Field label="Nom du groupe">
                   <Input placeholder="Ex: Netflix, Disney+..." value={groupForm.label} onChange={e => setGroupForm({ ...groupForm, label: e.target.value })} className="bg-white/5 border-white/10 h-11" />
                 </Field>
@@ -669,7 +647,6 @@ export default function AdminProducts() {
                   )}
                 </Field>
 
-                {/* Options */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Options ({(groupForm.options || []).length})</p>
@@ -693,8 +670,6 @@ export default function AdminProducts() {
                             className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       </div>
-
-                      {/* Formulaire option inline */}
                       <AnimatePresence>
                         {editingOptionIdx === i && optionForm && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
