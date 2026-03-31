@@ -1,6 +1,5 @@
 // client/src/hooks/useVisitorTracker.ts
-const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
-const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
+// ✅ SÉCURISÉ — Aucune clé Supabase. Le tracking passe par /api/track-visit (serveur).
 
 async function getIPData() {
   try {
@@ -86,14 +85,10 @@ export async function trackVisit(page: string) {
       return id;
     })();
 
-    await fetch(`${SUPABASE_URL}/rest/v1/Visitors`, {
+    // ✅ Appel vers notre serveur — pas vers Supabase directement
+    await fetch("/api/track-visit", {
       method: "POST",
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ip: ipData.ip || "?",
         country: ipData.country_name || "?",
