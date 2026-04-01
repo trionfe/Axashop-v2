@@ -25,7 +25,6 @@ import ProductPage from "./pages/ProductPage";
 import { useAuth } from "./_core/hooks/useAuth";
 import { trackVisit } from "./hooks/useVisitorTracker";
 
-
 const SUPABASE_URL = "https://eqzcmxtrkgmcjhvbnefq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_efQGrrNRPLO7uLmKqsA5Jw_uyGx5Cc7";
 
@@ -62,7 +61,6 @@ function Router() {
   const { user } = useAuth();
   const [location] = useLocation();
 
-  // Track visits (skip admin pages)
   useEffect(() => {
     if (!location.startsWith("/admin")) {
       trackVisit(location);
@@ -93,24 +91,27 @@ function Router() {
 function App() {
   const [maintenance, setMaintenance] = useState(false);
   const [checking, setChecking] = useState(true);
-  const isAdmin = window.location.pathname.startsWith("/admin") ||
-    localStorage.getItem("admin_auth") === "true";
+
+  const isAdminPath = window.location.pathname.startsWith("/admin");
 
   useEffect(() => {
-    if (isAdmin) { setChecking(false); return; }
+    if (isAdminPath) {
+      setChecking(false);
+      return;
+    }
     getMaintenanceMode().then(m => {
       setMaintenance(m);
       setChecking(false);
     });
   }, []);
 
-  if (checking && !isAdmin) return (
+  if (checking && !isAdminPath) return (
     <div className="fixed inset-0 bg-[#030711] flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
-  if (maintenance && !isAdmin) return <MaintenancePage />;
+  if (maintenance && !isAdminPath) return <MaintenancePage />;
 
   return (
     <ErrorBoundary>
