@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -19,21 +19,17 @@ function formatDate(dateString: string) {
 }
 
 export default function AdminReviews() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [, setLocation] = useLocation();
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const { data: reviews, isLoading, refetch } = trpc.adminGetReviews.useQuery();
-  const deleteReviewMutation = trpc.adminDeleteReview.useMutation();
+  const { data: user, isLoading: authLoading } = trpc.getMe.useQuery();
+  const isAuthenticated = user?.role === "admin";
 
-  useEffect(() => {
-    const authStatus = localStorage.getItem("admin_auth");
-    if (authStatus !== "true") {
-      setLocation("/admin");
-    } else {
-      setIsAuthenticated(true);
-    }
-  }, [setLocation]);
+  const { data: reviews, isLoading, refetch } = trpc.adminGetReviews.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+  const deleteReviewMutation = trpc.adminDeleteReview.useMutation();
 
   const handleDelete = async (id: number) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cet avis ?")) {
@@ -53,7 +49,16 @@ export default function AdminReviews() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="fixed inset-0 bg-[#030711] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
+    setLocation("/admin");
     return null;
   }
 
