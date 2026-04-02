@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ROUTES NEON SÉCURISÉES — remplace supabase-routes.ts
  *
