@@ -7,12 +7,12 @@ import { getSettings, saveSettings } from "@/lib/products";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ✅ SÉCURISÉ — Aucune clé Supabase. Tout passe par /api/supabase/* (serveur).
+// ✅ SÉCURISÉ — Aucune clé DB. Tout passe par /api/neon/* (serveur Neon).
 
 // ── Produits simples ──────────────────────────────────────────────────────────
 async function loadProducts(): Promise<any[]> {
   try {
-    const res = await fetch("/api/supabase/products");
+    const res = await fetch("/api/neon/products");
     if (!res.ok) return [];
     const rows = await res.json();
     return rows[0]?.Data || [];
@@ -47,7 +47,7 @@ async function compressAllImages(products: any[]): Promise<any[]> {
 async function saveProducts(products: any[]): Promise<boolean> {
   try {
     const compressed = await compressAllImages(products);
-    const res = await fetch("/api/supabase/products", {
+    const res = await fetch("/api/neon/products", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ Data: compressed }),
@@ -59,7 +59,7 @@ async function saveProducts(products: any[]): Promise<boolean> {
 // ── Groupes ───────────────────────────────────────────────────────────────────
 async function loadGroups(): Promise<any[]> {
   try {
-    const res = await fetch("/api/supabase/groups");
+    const res = await fetch("/api/neon/groups");
     if (!res.ok) return [];
     return await res.json() || [];
   } catch { return []; }
@@ -69,14 +69,14 @@ async function saveGroup(group: any): Promise<boolean> {
   try {
     const payload = { label: group.label, category: group.category, image: group.image, options: group.options };
     if (group.id) {
-      const res = await fetch(`/api/supabase/groups/${group.id}`, {
+      const res = await fetch(`/api/neon/groups/${group.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       return res.ok;
     } else {
-      const res = await fetch("/api/supabase/groups", {
+      const res = await fetch("/api/neon/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -88,7 +88,7 @@ async function saveGroup(group: any): Promise<boolean> {
 
 async function deleteGroup(id: number): Promise<boolean> {
   try {
-    const res = await fetch(`/api/supabase/groups/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/neon/groups/${id}`, { method: "DELETE" });
     return res.ok;
   } catch { return false; }
 }
@@ -96,7 +96,7 @@ async function deleteGroup(id: number): Promise<boolean> {
 // ── Maintenance ───────────────────────────────────────────────────────────────
 async function loadMaintenance(): Promise<boolean> {
   try {
-    const res = await fetch("/api/supabase/settings/maintenance");
+    const res = await fetch("/api/neon/settings/maintenance");
     if (!res.ok) return false;
     const data = await res.json();
     return data?.maintenance === true;
@@ -104,7 +104,7 @@ async function loadMaintenance(): Promise<boolean> {
 }
 
 async function setMaintenanceApi(enabled: boolean): Promise<void> {
-  await fetch("/api/supabase/settings/maintenance", {
+  await fetch("/api/neon/settings/maintenance", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ enabled }),
