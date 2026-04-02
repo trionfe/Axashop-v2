@@ -40,7 +40,7 @@ export default function AdminVisitors() {
     setLoading(true);
     try {
       // ✅ Appel vers notre API serveur (authentifié côté serveur)
-      const res = await fetch("/api/supabase/visitors");
+      const res = await fetch("/api/neon/visitors");
       if (!res.ok) { setLoading(false); return; }
       const data = await res.json();
       setVisitors(data || []);
@@ -56,14 +56,14 @@ export default function AdminVisitors() {
 
   async function deleteVisitor(id: number) {
     // ✅ DELETE via serveur (authentifié)
-    await fetch(`/api/supabase/visitors/${id}`, { method: "DELETE" });
+    await fetch(`/api/neon/visitors/${id}`, { method: "DELETE" });
     setVisitors(v => v.filter((x: any) => x.id !== id));
   }
 
   async function clearAll() {
     if (!confirm("Supprimer tous les visiteurs ?")) return;
     // ✅ DELETE via serveur (authentifié)
-    await fetch("/api/supabase/visitors", { method: "DELETE" });
+    await fetch("/api/neon/visitors", { method: "DELETE" });
     setVisitors([]);
     setStats({ total: 0, today: 0, unique: 0, mobile: 0 });
   }
