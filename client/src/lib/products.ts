@@ -1,6 +1,6 @@
 // client/src/lib/products.ts
 // ✅ SÉCURISÉ — Aucune clé API dans ce fichier.
-// Toutes les opérations Supabase passent par les routes serveur /api/supabase/*
+// Toutes les opérations passent par les routes serveur /api/neon/*
 
 // Normalise les prix en numbers pour éviter les bugs d'affichage côté client
 function normalizeProducts(products: any[]): any[] {
@@ -59,11 +59,11 @@ export const DEFAULT_PRODUCTS = [
   {"id":"game-roblox-2000rbx","columnId":"Gaming","nameKey":"prod_game_roblox_2000rbx_name","descKey":"prod_game_roblox_2000rbx_desc","pricePayPal":15.00,"priceLTC":0.00180,"pricePSC":15.00,"image":"https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=60","stock":29},
 ];
 
-// ── Helpers sécurisés — passent par le serveur, jamais par Supabase directement ──
+// ── Helpers sécurisés — passent par le serveur Neon, jamais exposés au client ──
 
 async function apiLoad(): Promise<any[] | null> {
   try {
-    const res = await fetch("/api/supabase/products");
+    const res = await fetch("/api/neon/products");
     if (!res.ok) return null;
     const rows = await res.json();
     if (!Array.isArray(rows) || rows.length === 0) return null;
@@ -75,7 +75,7 @@ async function apiLoad(): Promise<any[] | null> {
 
 async function apiSave(products: any[]): Promise<boolean> {
   try {
-    const res = await fetch("/api/supabase/products", {
+    const res = await fetch("/api/neon/products", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ Data: products }),
