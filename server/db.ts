@@ -6,7 +6,8 @@ import { Octokit } from "@octokit/rest";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DATA_DIR = path.join(__dirname, 'data');
+const IS_VERCEL = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const DATA_DIR = IS_VERCEL ? '/tmp/axashop-data' : path.join(__dirname, 'data');
 
 // Configuration GitHub
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
