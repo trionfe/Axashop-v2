@@ -290,7 +290,7 @@
 
   <!-- Amount -->
   <div class="field">
-    <label>Montant que tu veux recevoir</label>
+    <label>Montant que tu veux exchange</label>
     <div class="input-row">
       <input type="number" id="amount" placeholder="0.00" min="0" step="0.01" oninput="calc()">
       <span class="curr-label">€</span>
@@ -299,7 +299,7 @@
 
   <!-- Result -->
   <div class="result-card" id="resultCard">
-    <div class="r-label" id="resLabel">Tu dois envoyer</div>
+    <div class="r-label" id="resLabel">Tu vas envoyer (frais inclus)</div>
     <div class="r-val" id="resVal">—<span class="r-curr">€</span></div>
     <div class="r-detail" id="resDetail"></div>
     <div class="fee-badge fee-zero" id="feeBadge">Frais : —</div>
@@ -395,7 +395,7 @@ function badgeClass(pct) {
       return;
     }
 
-    resLabel.textContent = `Tu dois envoyer (${NAMES[fromKey]} → ${NAMES[toKey]})`;
+    resLabel.textContent = `Tu vas envoyer (frais inclus) (${NAMES[fromKey]} → ${NAMES[toKey]})`;
     feeBadge.textContent = `Frais : ${fee.toFixed(2)}%`;
     feeBadge.className = `fee-badge ${badgeClass(fee)}`;
 
